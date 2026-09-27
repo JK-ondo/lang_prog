@@ -160,10 +160,31 @@ typedef enum { PHASE_LEX, PHASE_PARSE, PHASE_SEMANTIC, PHASE_CODEGEN } phase_t;
 | `--dump-tokens` | `PHASE_LEX` |
 | `--dump-ast` | `PHASE_PARSE` |
 | `--dump-symtab` / `-fsyntax-only` | `PHASE_SEMANTIC` |
-| 既定 / `-S` | `PHASE_CODEGEN` |
+| `-S` | `PHASE_CODEGEN` |
+| **指定なし（既定）** | **`MPPLC_LAST_IMPLEMENTED_PHASE`** |
 
 複数指定されたら**最も深いもの**が要求フェーズになる。`--dump-tokens --dump-ast` なら
 `PHASE_PARSE` まで走り、両方を出力する。
+
+### 既定が「実装済みの最終フェーズ」である理由
+
+各段階の課題は「そのプログラムを引数 1 つで走らせたときの標準出力」を提出物として指定している。
+既定を `PHASE_CODEGEN` に固定すると、段階1〜3 の間は `./mpplc foo.mpl` が「未実装」で落ちて、
+課題の実行方法がそのまま通らない。
+
+既定を定数に結びつけると、段階が進むにつれて既定の成果物が自動的に移る。
+
+| 段階 | 定数 | `./mpplc foo.mpl` が出すもの |
+| ---- | ---- | ---------------------------- |
+| 1 | `PHASE_LEX` | 字句の出現数の表 |
+| 2 | `PHASE_PARSE` | 整形出力（予定） |
+| 3 | `PHASE_SEMANTIC` | 交差参照表（予定） |
+| 4 | `PHASE_CODEGEN` | CASL II（`-o` かファイルへ） |
+
+**未実装エラーは「明示的に深いフェーズを要求したとき」だけ出る。** 段階1 の時点で `--dump-ast`
+を渡すと `mpplc: error: parsing is not implemented yet` になる。既定では出ない。
+
+段階が進むたびの変更は、やはり「定数を 1 つ進める」「フェーズ関数を 1 本足す」の 2 つだけ。
 
 `main` の流れ:
 
