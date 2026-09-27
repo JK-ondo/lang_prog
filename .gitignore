@@ -1,0 +1,18 @@
+# ビルド生成物
+build/
+build-*/
+.case-work/
+compile_commands.json
+*.o
+*.a
+*.dSYM/
+*.plist
+
+# 作業メモ（計画と経過。提出物ではない）
+.work/
+
+# エディタ / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
