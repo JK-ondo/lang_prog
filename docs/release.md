@@ -52,7 +52,7 @@ gh release create v1 \
 
 ```sh
 mise run verify:build
-gh release upload v1 build-verify/lppc
+gh release upload v1 build-verify/mpplc
 ```
 
 macOS arm64 向けのバイナリなので、提出先の環境が違うなら添えない方がよい。

@@ -8,7 +8,7 @@ foreach(case_src IN LISTS LPP_CASES)
   string(REGEX REPLACE "\\.src$" "" case_name "${case_rel}")
   add_test(
     NAME "case/${case_name}"
-    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/run_case.sh" "$<TARGET_FILE:lppc>" "${case_src}")
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/run_case.sh" "$<TARGET_FILE:mpplc>" "${case_src}")
 endforeach()
 
 list(LENGTH LPP_CASES case_count)

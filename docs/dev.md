@@ -11,10 +11,20 @@
 | 整形           | `clang-format`                            | **未導入**（下記参照）   |
 | 静的解析       | `clang --analyze`                         | Apple clang 同梱         |
 
-`clang-format` が入るまで `mise run verify` は `verify:fmt` で落ちる。導入は
-`mise use -g aqua:llvm/clang-format` 相当を**自分で**実行する（このリポジトリの設定では
-ツールを勝手に入れない方針）。整形検査を後回しにするなら `mise run verify:build`
-`mise run verify:test` を個別に走らせる。
+`clang-format` はこのマシンに入っていない。そのため **`verify:fmt` は検証一式から外してある**
+（`mise.toml` の `[tasks.verify]` の `depends` を見ること）。タスク自体は残っているので、
+`mise run verify:fmt` で単独に走らせられる。
+
+導入するときは、割り当てを確認してから**自分で**実行する（このリポジトリではツールを勝手に
+入れない方針）。
+
+```sh
+mise registry clang-format     # どのバックエンドに割り当てられているか
+mise ls-remote clang-format    # 版を引けるか（入れずに確認できる）
+mise use -g clang-format@latest
+```
+
+入ったら `[tasks.verify]` の `depends` を `["verify:*"]` に戻す。それまで整形検査は効かない。
 
 ## 日常のコマンド
 
@@ -37,12 +47,12 @@ mise run verify
 
 内訳:
 
-| leaf           | 中身                                                   |
-| -------------- | ------------------------------------------------------ |
-| `verify:fmt`   | `clang-format --dry-run --Werror`                      |
-| `verify:lint`  | `clang --analyze`（未初期化・NULL 参照・リークを見る） |
-| `verify:build` | `-Werror` 付きの Release ビルド                        |
-| `verify:test`  | `ctest`（ASan/UBSan 有効のバイナリで）                 |
+| leaf           | 中身                                                   | `verify` に含まれるか |
+| -------------- | ------------------------------------------------------ | --------------------- |
+| `verify:lint`  | `clang --analyze`（未初期化・NULL 参照・リークを見る） | はい                  |
+| `verify:build` | `-Werror` 付きの Release ビルド                        | はい                  |
+| `verify:test`  | `ctest`（ASan/UBSan 有効のバイナリで）                 | はい                  |
+| `verify:fmt`   | `clang-format --dry-run --Werror`                      | **いいえ**（未導入）  |
 
 C には別の型検査器がないので、`-Werror` 付きビルドがその役目を負う。
 

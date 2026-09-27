@@ -13,17 +13,17 @@ option(LPP_SANITIZE "Debug ビルドで address/undefined サニタイザを有�
 # CONFIGURE_DEPENDS 付きの glob を使う。ビルドし直せば新しい .c を拾う。
 file(GLOB LPP_SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/src/*.c")
 
-add_executable(lppc ${LPP_SOURCES})
-target_include_directories(lppc PRIVATE "${CMAKE_SOURCE_DIR}/src")
-target_compile_options(lppc PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes)
+add_executable(mpplc ${LPP_SOURCES})
+target_include_directories(mpplc PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_compile_options(mpplc PRIVATE -Wall -Wextra -Wpedantic -Wshadow -Wstrict-prototypes)
 
 if(LPP_WERROR)
-  target_compile_options(lppc PRIVATE -Werror)
+  target_compile_options(mpplc PRIVATE -Werror)
 endif()
 
 if(LPP_SANITIZE AND CMAKE_BUILD_TYPE STREQUAL "Debug")
-  target_compile_options(lppc PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer -g)
-  target_link_options(lppc PRIVATE -fsanitize=address,undefined)
+  target_compile_options(mpplc PRIVATE -fsanitize=address,undefined -fno-omit-frame-pointer -g)
+  target_link_options(mpplc PRIVATE -fsanitize=address,undefined)
 endif()
 
 enable_testing()

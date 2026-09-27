@@ -48,5 +48,5 @@ tests/cases/stage1-lexer/bad-char.err   →  期待するエラーメッセー�
 から**コミットする。
 
 ```sh
-UPDATE=1 tests/run_case.sh build/lppc tests/cases/stage1-lexer/number.src
+UPDATE=1 tests/run_case.sh build/mpplc tests/cases/stage1-lexer/number.src
 ```
