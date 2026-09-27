@@ -1,0 +1,11 @@
+usage: mpplc [options] <file.mpl>
+
+Options:
+  --dump-tokens       dump the token stream
+  -w                  suppress all warnings
+  -Werror             treat warnings as errors
+  -fmax-errors=<n>    stop after n errors (0 means unlimited)
+  -h, --help          display this help and exit
+  --version           display version information and exit
+
+With no options, mpplc prints the token count table to standard output.
