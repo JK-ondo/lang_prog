@@ -8,23 +8,17 @@
 | -------------- | ----------------------------------------- | ------------------------ |
 | コンパイル     | Apple clang (`/usr/bin/clang`)            | OS 同梱                  |
 | ビルド生成     | cmake (mise) + ninja                      | 導入済み                 |
-| 整形           | `clang-format`                            | **未導入**（下記参照）   |
+| 整形           | `clang-format` (mise)                     | 導入済み                 |
 | 静的解析       | `clang --analyze`                         | Apple clang 同梱         |
 
-`clang-format` はこのマシンに入っていない。そのため **`verify:fmt` は検証一式から外してある**
-（`mise.toml` の `[tasks.verify]` の `depends` を見ること）。タスク自体は残っているので、
-`mise run verify:fmt` で単独に走らせられる。
-
-導入するときは、割り当てを確認してから**自分で**実行する（このリポジトリではツールを勝手に
-入れない方針）。
+`clang-tidy` は入っていないが、静的解析は Apple clang 同梱の `clang --analyze`（`verify:lint`）
+が担うので支障はない。ツールを足すときは、割り当てを確認してから**自分で**実行する（この
+リポジトリではツールを勝手に入れない方針）。
 
 ```sh
-mise registry clang-format     # どのバックエンドに割り当てられているか
-mise ls-remote clang-format    # 版を引けるか（入れずに確認できる）
-mise use -g clang-format@latest
+mise registry <tool>     # どのバックエンドに割り当てられているか
+mise ls-remote <tool>    # 版を引けるか（入れずに確認できる）
 ```
-
-入ったら `[tasks.verify]` の `depends` を `["verify:*"]` に戻す。それまで整形検査は効かない。
 
 ## 日常のコマンド
 
@@ -47,12 +41,12 @@ mise run verify
 
 内訳:
 
-| leaf           | 中身                                                   | `verify` に含まれるか |
-| -------------- | ------------------------------------------------------ | --------------------- |
-| `verify:lint`  | `clang --analyze`（未初期化・NULL 参照・リークを見る） | はい                  |
-| `verify:build` | `-Werror` 付きの Release ビルド                        | はい                  |
-| `verify:test`  | `ctest`（ASan/UBSan 有効のバイナリで）                 | はい                  |
-| `verify:fmt`   | `clang-format --dry-run --Werror`                      | **いいえ**（未導入）  |
+| leaf           | 中身                                                   |
+| -------------- | ------------------------------------------------------ |
+| `verify:fmt`   | `clang-format --dry-run --Werror`                      |
+| `verify:lint`  | `clang --analyze`（未初期化・NULL 参照・リークを見る） |
+| `verify:build` | `-Werror` 付きの Release ビルド                        |
+| `verify:test`  | `ctest`（ASan/UBSan 有効のバイナリで）                 |
 
 C には別の型検査器がないので、`-Werror` 付きビルドがその役目を負う。
 
