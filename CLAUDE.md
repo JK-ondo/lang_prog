@@ -57,9 +57,8 @@ Claude がやらないこと:
 
 ## この環境の事情
 
-- `clang-format` と `clang-tidy` は**未導入**。そのため `verify:fmt` は `[tasks.verify]` の
-  `depends` から外してある。導入したらユーザーが `["verify:*"]` に戻す。Claude はツールを
-  入れない。整形検査が効いていない期間だと分かる状態で進める。
+- `clang-format` は mise の conda バックエンドで導入済み。`clang-tidy` は未導入で、静的解析は
+  Apple clang 同梱の `clang --analyze`（`verify:lint`）が担う。Claude はツールを入れない。
 - 静的解析は Apple clang 同梱の `clang --analyze` で代替している。
 - Debug ビルドは ASan/UBSan 付き。ポインタ周りのバグはまずここで落とす。
 
