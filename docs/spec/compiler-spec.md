@@ -47,6 +47,51 @@ MPPL で書かれたソースファイル 1 つを読み込み、CASL2 のアセ
 
 `-S` は「CASL2 を出力したところで止める」なので、段階4 未満では未実装エラーになる。
 
+### 2.2 `--version` の出力
+
+標準出力へ 1 行だけ出し、終了コード 0。
+
+```
+mpplc 0.1.0
+```
+
+版番号はリリースタグに合わせて上げる。`v1` を打つ時点で `0.1.0`、`v2` で `0.2.0`、`v3` で
+`0.3.0`、`v4` で `1.0.0`。**ビルド時に `git describe` から生成しない** — 生成すると
+`--version` の出力がビルドごとに変わり、テストの期待値が書けなくなる。
+
+### 2.3 `--help` の出力
+
+標準出力へ出し、終了コード 0。**その時点で実装済みのオプションだけを載せる。** 未実装の
+オプションを案内すると、使う人が指定して「未実装」と言われることになる。段階が上がるたびに
+行を足す。
+
+段階1（`v1`）の時点では次のとおり。本文は英語にする（診断メッセージが英語なので揃える）。
+
+```
+usage: mpplc [options] <file.mpl>
+
+Options:
+  --dump-tokens       dump the token stream
+  -w                  suppress all warnings
+  -Werror             treat warnings as errors
+  -fmax-errors=<n>    stop after n errors (0 means unlimited)
+  -h, --help          display this help and exit
+      --version       display version information and exit
+
+With no options, mpplc prints the token count table to standard output.
+```
+
+引数を 1 つも与えずに起動した場合は、**標準エラー**へ usage の 1 行目だけを出し、
+`mpplc: error: no input file` を添えて終了コード 1（§6）。`--help` と違って成功ではない。
+
+### 2.4 `--` は受け付けない
+
+`--` は不明なオプションとして扱い、`mpplc: error: unrecognized command-line option '--'` を出して
+終了コード 1。
+
+POSIX の慣習では「以降を全部ファイル名とみなす」が、MPPL のファイル名は英数字であり `-` で
+始まる名前を渡す必要がない。仕様を増やす利得がないため受け付けない。
+
 ## 3. 入力ファイルの制約
 
 ### 3.1 入力できるのは 1 ファイルのみ
@@ -143,6 +188,14 @@ CASL2 は 1 つのソースに複数のプログラム単位を書くことが�
 | `-Wuninitialized` | 代入前に参照している変数 | `-Wall` | 同名 |
 | `-Wshadow` | 局所変数・仮引数が大域変数を隠す | `-Wextra` | 同名 |
 | `-Wunreachable-code` | 到達しないコード（`return` や `break` の後など） | `-Wextra` | ※ GCC では名前だけ残っていて何もしない。実装は独自 |
+| `-Wbad-file-extension` | 入力ファイルの拡張子が `.mpl` でない（§3.1） | 既定で有効 | 独自。GCC に対応物はない |
+
+`-Wbad-file-extension` は既定で有効で、`-Wall` や `-Wextra` を待たない。拡張子の間違いは
+ほぼ確実に指定の誤りであり、黙って通す価値がないため。`-w` で消せ、`-Werror` でエラーになる。
+
+**すべての警告はオプション名を持つ。** 診断の `[...]` に出す名前がない警告は作らない。使う人が
+「この警告を消すには何を指定すればよいか」を常に知れるようにするための規約
+（[内部仕様](internal/architecture.md#契約)）。
 
 ### 4.4 最適化（余力があれば）
 
