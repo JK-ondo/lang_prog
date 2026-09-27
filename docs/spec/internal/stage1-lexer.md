@@ -145,22 +145,64 @@ typedef struct {
 ### 関数
 
 ```c
-const char  *token_kind_name(token_kind_t kind);   /* 種類名。dump と診断が使う */
-token_kind_t token_keyword_lookup(const char *s, size_t len);  /* 予約語でなければ TOK_NAME */
+/* 出現数の表に出す綴り。キーワードは "and"、記号は "+"、他は "NAME" "NUMBER" "STRING" */
+const char *token_kind_spelling(token_kind_t kind);
+
+/* --dump-tokens に出す記号名。"AND" "PLUS" "NAME" "ASSIGN" … */
+const char *token_kind_symbol(token_kind_t kind);
+
+/* 予約語でなければ TOK_NAME を返す */
+token_kind_t token_keyword_lookup(const char *s, size_t len);
 ```
 
-### enum と名前表がずれる事故を止める
+**種類名が 2 通りある**のは、2 つの出力が別の綴りを要求するため。
 
-名前表は enum と同じ順で持ち、要素数をコンパイル時に固定する。
+| 用途 | `TOK_ASSIGN` の場合 | `TOK_NAME` の場合 |
+| ---- | ------------------- | ----------------- |
+| 出現数の表（課題1 の提出物） | `:=` | `NAME` |
+| `--dump-tokens`（デバッグ用） | `ASSIGN` | `NAME` |
+
+`token_keyword_lookup` は `token_kind_spelling` の表をそのまま引ける（キーワードの綴りが表に
+あるため）。専用の表を作らない。
+
+### enum と 2 つの表がずれる事故を止める
+
+50 個の enum 値に対して名前の配列が 2 本ある。**手で並べると必ずずれる。** ずれると、
+テストは通るのに診断や dump だけが嘘をつくという、最も見つけにくい壊れ方をする。
+
+対策は 2 つあり、どちらを採るかは実装時に決める。
+
+**案A: 1 つのリストから enum と 2 つの表を生成する（X リスト）**
 
 ```c
-static const char *const kind_names[] = { "EOF", "and", "array", /* ... */ };
-static_assert(sizeof kind_names / sizeof kind_names[0] == TOK_KIND_COUNT,
-              "kind_names が token_kind_t と食い違っている");
+/* token.h */
+#define TOKEN_KINDS(X)                  \
+  X(TOK_EOF,     "EOF",     "EOF")      \
+  X(TOK_AND,     "AND",     "and")      \
+  X(TOK_ARRAY,   "ARRAY",   "array")    \
+  /* … 50 行 … */                       \
+  X(TOK_ASSIGN,  "ASSIGN",  ":=")       \
+  X(TOK_NAME,    "NAME",    "NAME")
+
+#define X(kind, symbol, spelling) kind,
+typedef enum { TOKEN_KINDS(X) TOK_KIND_COUNT } token_kind_t;
+#undef X
 ```
 
-これを入れないと、enum に 1 つ足したときに名前表がずれ、**テストは通るのに診断だけ嘘をつく**と
-いう最も見つけにくい壊れ方をする。
+`token.c` で同じ `TOKEN_KINDS(X)` を別の `X` の定義で 2 回展開すれば 2 つの表ができる。
+**ずれることが原理的に起きない**のが利点。`##` 演算子を使わないので MISRA 20.10 には触れない
+（enum 名を全部書き下すため）。欠点はマクロを読む負担。
+
+**案B: 手で並べて `static_assert` で長さを固定する**
+
+```c
+static const char *const kind_symbols[] = { "EOF", "AND", "ARRAY", /* … */ };
+static_assert(sizeof kind_symbols / sizeof kind_symbols[0] == TOK_KIND_COUNT,
+              "kind_symbols が token_kind_t と食い違っている");
+```
+
+読みやすいが、**長さは守れても順序は守れない**。`TOK_AND` と `TOK_ARRAY` を入れ替えても
+`static_assert` は通る。長さが合っているという安心が、かえって危ない。
 
 予約語の引き方は線形探索 28 件で十分。トークン数に対して定数回なので速度は問題にならない。
 
@@ -338,11 +380,14 @@ static unsigned counts[TOK_KIND_COUNT];   /* 種類ごとの出現数 */
 | なし（段階1 の既定） | **出現数の表** | 課題1 の提出物 |
 | `--dump-tokens` | 位置つきのトークン列（1 行 1 トークン） | 自分のデバッグ用 |
 
-`--dump-tokens` の書式は課題文の指定外なので自由に決めてよい。暫定案:
+`--dump-tokens` の書式は[外部仕様 §4.2](../compiler-spec.md#--dump-tokens-の出力書式)で確定した。
+タブ区切り、`STRING` だけ長さと引用符つきの中身を出す。
 
-```
-行:桁  種類名  綴り
-```
+実装で注意する点が 2 つある。
+
+- **タブ区切り**なので `printf` の書式に空白の桁揃えを入れない。`"%d:%d\t%s\t..."`。
+- `STRING` の中身は `\'` `\t` `\\` をエスケープして出す。この 3 つで尽きる（改行は文字列に
+  入れられず、タブ以外の制御コードは字句エラーになるため）。
 
 ---
 
