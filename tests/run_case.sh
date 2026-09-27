@@ -57,11 +57,11 @@ if [ -f "$base.argv" ]; then
   # 引数列の全体。空ファイルなら引数 0 個（入力ファイル無しの検査に使う）。
   argv=$(cat "$base.argv")
 else
-  argv=""
   if [ -f "$base.args" ]; then
-    argv=$(cat "$base.args")
+    argv="$(cat "$base.args") $name.src"
+  else
+    argv="$name.src"
   fi
-  argv="$argv $name.src"
 fi
 
 expected_code=0
