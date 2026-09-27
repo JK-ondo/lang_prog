@@ -8,7 +8,7 @@
 
 /* 出力に argv[0] を使わない。ビルド場所によって変わる文字列が出ると、テストの期待値が
  * 環境に依存してしまう。 */
-static const char *const prog = "lppc";
+static const char *const prog = "mpplc";
 
 static void usage(FILE *out) {
   fprintf(out, "usage: %s [options] <source>\n", prog);

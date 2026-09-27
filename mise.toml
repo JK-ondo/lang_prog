@@ -21,7 +21,7 @@ run = "ctest --test-dir {{env.BUILD_DIR}} --output-on-failure"
 [tasks.run]
 description = "コンパイラを走らせる: mise run run -- examples/hello.src"
 depends = ["build"]
-run = "{{env.BUILD_DIR}}/lppc"
+run = "{{env.BUILD_DIR}}/mpplc"
 
 [tasks.clean]
 description = "ビルドディレクトリを消す"

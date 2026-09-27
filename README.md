@@ -21,7 +21,7 @@ mise run test       # テスト
 mise run verify     # 検証一式（提出前にこれを緑にする）
 ```
 
-生成物は `build/lppc`。
+生成物は `build/mpplc`。
 
 ## directory layout
 
