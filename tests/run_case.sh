@@ -1,15 +1,19 @@
 #!/bin/sh
 # ケーステストを1件走らせる。
-#   run_case.sh <コンパイラのパス> <ケースの .src>
+#   run_case.sh <コンパイラのパス> <ケースの基底パス>
 #
-# .src の隣に置いたファイルが期待値になる（詳細は tests/README.md）:
-#   <名前>.out   期待する標準出力（完全一致。無ければ標準出力を検査しない）
-#   <名前>.err   期待する標準エラー（完全一致。無ければ検査しない）
-#   <名前>.code  期待する終了コード（無ければ 0）
-#   <名前>.args  .src より前に渡す追加の引数（空白区切り、1 行）
+# 基底パスは拡張子を取り除いたもの（例 tests/cases/cli/no-input）。その隣に置いたファイルが
+# 入力と期待値になる。詳細は tests/README.md。
 #
-# コンパイラはケースのディレクトリで、入力を basename で渡して起動する。出力に現れるファイル名
-# が `foo.src` になり、期待値が環境のパスに依存しない。
+#   <基底>.src    入力となる MPPL ソース
+#   <基底>.args   .src の前に渡す追加の引数（空白区切り）
+#   <基底>.argv   引数列の全体。これがあると .src を自動で渡さない（.args とは排他）
+#   <基底>.out    期待する標準出力（完全一致。無ければ検査しない）
+#   <基底>.err    期待する標準エラー（完全一致。無ければ検査しない）
+#   <基底>.code   期待する終了コード（無ければ 0）
+#
+# コンパイラはケースのディレクトリで起動する。渡すパスも相対なので、出力に現れるファイル名が
+# `foo.src` のようになり、期待値が環境のパスに依存しない。
 #
 # UPDATE=1 を付けて走らせると .out / .err を実際の出力で上書きする。期待値は仕様から先に書く
 # もので、これは「手で確認した出力を書き写す手間」を省くためだけにある。中身を読まずに上書き
@@ -18,7 +22,7 @@
 set -eu
 
 if [ "$#" -ne 2 ]; then
-  echo "usage: run_case.sh <compiler> <case.src>" >&2
+  echo "usage: run_case.sh <compiler> <case-base>" >&2
   exit 2
 fi
 
@@ -31,28 +35,38 @@ to_abs() {
 }
 
 compiler=$(to_abs "$1")
-src=$(to_abs "$2")
-base=${src%.src}
-dir=$(dirname "$src")
+base=$(to_abs "$2")
+dir=$(dirname "$base")
 name=$(basename "$base")
 
 if [ ! -x "$compiler" ]; then
   echo "コンパイラが実行できない: $compiler" >&2
   exit 2
 fi
-if [ ! -f "$src" ]; then
-  echo "ケースが無い: $src" >&2
+if [ -f "$base.args" ] && [ -f "$base.argv" ]; then
+  echo "[$name] .args と .argv は同時に置けない（.argv は引数列の全体を指定する）" >&2
   exit 2
+fi
+if [ ! -f "$base.src" ] && [ ! -f "$base.argv" ]; then
+  echo "[$name] .src も .argv も無い。どちらかが必要" >&2
+  exit 2
+fi
+
+# 渡す引数列を組み立てる。
+if [ -f "$base.argv" ]; then
+  # 引数列の全体。空ファイルなら引数 0 個（入力ファイル無しの検査に使う）。
+  argv=$(cat "$base.argv")
+else
+  argv=""
+  if [ -f "$base.args" ]; then
+    argv=$(cat "$base.args")
+  fi
+  argv="$argv $name.src"
 fi
 
 expected_code=0
 if [ -f "$base.code" ]; then
   expected_code=$(cat "$base.code")
-fi
-
-args=""
-if [ -f "$base.args" ]; then
-  args=$(cat "$base.args")
 fi
 
 # 作業場所は cwd の下に置く。ctest から呼ばれるときの cwd はビルドツリーなので汚れない。
@@ -64,8 +78,8 @@ mkdir -p "$work"
 trap 'rm -rf "$work"' EXIT INT TERM
 
 set +e
-# shellcheck disable=SC2086  # .args は意図的に単語分割する
-(cd "$dir" && "$compiler" $args "$name.src") >"$work/out" 2>"$work/err"
+# shellcheck disable=SC2086  # argv は意図的に単語分割する
+(cd "$dir" && "$compiler" $argv) >"$work/out" 2>"$work/err"
 actual_code=$?
 set -e
 
@@ -109,6 +123,7 @@ fi
 
 # 期待値ファイルが無いケースが落ちたときは、手掛かりとして実際の出力を見せる。
 if [ "$status" -ne 0 ] && [ "$checked_output" -eq 0 ]; then
+  echo "[$name] 渡した引数: $argv"
   echo "[$name] 実際の標準出力:"
   cat "$work/out"
   echo "[$name] 実際の標準エラー:"
