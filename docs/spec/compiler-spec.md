@@ -76,13 +76,21 @@ Options:
   -Werror             treat warnings as errors
   -fmax-errors=<n>    stop after n errors (0 means unlimited)
   -h, --help          display this help and exit
-      --version       display version information and exit
+  --version           display version information and exit
 
 With no options, mpplc prints the token count table to standard output.
 ```
 
-引数を 1 つも与えずに起動した場合は、**標準エラー**へ usage の 1 行目だけを出し、
-`mpplc: error: no input file` を添えて終了コード 1（§6）。`--help` と違って成功ではない。
+**使い方は `--help` を指定したときだけ出す。** 引数の誤りに対して usage を出さない。標準エラーへ
+診断 1 行だけを出して終了コード 1 とする（§5、§6）。
+
+```
+$ ./mpplc
+mpplc: error: no input file
+```
+
+gcc も clang もこの場面で usage を出さない。出さないことで、usage の文言を変えたときに
+`--help` のテストだけを直せばよくなる（診断のテストと二重管理にならない）。
 
 ### 2.4 `--` は受け付けない
 
@@ -193,6 +201,15 @@ CASL2 は 1 つのソースに複数のプログラム単位を書くことが�
 `-Wbad-file-extension` は既定で有効で、`-Wall` や `-Wextra` を待たない。拡張子の間違いは
 ほぼ確実に指定の誤りであり、黙って通す価値がないため。`-w` で消せ、`-Werror` でエラーになる。
 
+文言は次のとおり。ソース中に指すべき位置がないので**位置を持たない警告**の形をとる（§5）。
+
+```
+mpplc: warning: input file 'foo.txt' does not end in '.mpl' [-Wbad-file-extension]
+```
+
+警告を出した後はコンパイルを続ける（§3.1）。警告だけなら終了コードは 0。`-Werror` を付けた
+ときはエラーとして数えられるので 1 になる。
+
 **すべての警告はオプション名を持つ。** 診断の `[...]` に出す名前がない警告は作らない。使う人が
 「この警告を消すには何を指定すればよいか」を常に知れるようにするための規約
 （[内部仕様](internal/architecture.md#契約)）。
@@ -230,7 +247,21 @@ GCC と同じ形式で標準エラー出力に出す。
 foo.mpl:12:9: error: undefined variable 'x'
 foo.mpl:20:7: warning: unused variable 'tmp' [-Wunused-variable]
 mpplc: error: multiple input files are not supported (foo.mpl, bar.mpl)
+mpplc: warning: input file 'foo.txt' does not end in '.mpl' [-Wbad-file-extension]
 ```
+
+診断は**位置を持つものと持たないもの**に分かれる。
+
+| 種類 | 形 |
+|---|---|
+| 位置を持つエラー | `ファイル名:行:桁: error: メッセージ` |
+| 位置を持つ警告 | `ファイル名:行:桁: warning: メッセージ [-Wxxx]` |
+| 位置を持たないエラー | `mpplc: error: メッセージ` |
+| 位置を持たない警告 | `mpplc: warning: メッセージ [-Wxxx]` |
+
+位置を持たないのは、コマンドラインの誤りやファイルを開けなかった場合、および**ファイル名
+そのものについての診断**（拡張子の警告）である。ソース中に指すべき場所がないので、偽の
+`1:1` を書かない。
 
 - ソースに関するもの：`ファイル名:行番号:桁番号: error|warning: メッセージ`
 - 行・桁はどちらも **1 起点**。桁は、問題のあるトークンの**先頭**の位置を指す。
