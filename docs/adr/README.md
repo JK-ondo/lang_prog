@@ -23,3 +23,5 @@
 | # | 題 | 状態 |
 | - | -- | ---- |
 | [0001](0001-record-architecture-decisions.md) | 設計決定を ADR で残す | Accepted |
+| [0002](0002-arena-allocation.md) | 記憶域はアリーナで一括管理する | Accepted |
+| [0003](0003-continue-after-errors.md) | 字句・構文・意味のエラーは記録して続行する | Accepted |
