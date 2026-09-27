@@ -142,37 +142,111 @@ void     arena_destroy(arena_t *a);
 
 ## 診断 — diag
 
+### 型
+
+`diag_t` の中身はヘッダに書く。`main` が `diag_t d;` とスタックに置けるので、割当てが 1 件も
+発生せず、「明示的に解放する資源は `FILE*` だけ」という規約に例外を作らない。中身を他の
+モジュールが触らないのは規約で守る（触る必要がない）。
+
 ```c
-typedef struct diag diag_t;
+/* 診断メッセージの最大長。超えた分は切り捨てる。診断が切れてもコンパイル結果は変わらない。 */
+#define DIAG_MSG_MAX 512
+
+/* 診断に出すプログラム名。位置を持たない診断の行頭に付く。 */
+#define DIAG_PROG_NAME "mpplc"
 
 typedef struct {
-  const char *filename;           /* 診断に出すファイル名 */
+  const char *filename;            /* 診断に出すファイル名。所有しない */
   bool        no_warnings;         /* -w */
   bool        warnings_are_errors; /* -Werror */
   unsigned    max_errors;          /* -fmax-errors=n。0 は無制限 */
 } diag_config_t;
 
-void     diag_init(diag_t *d, const diag_config_t *cfg, FILE *out);
-void     diag_error(diag_t *d, int line, int col, const char *fmt, ...);
-void     diag_warning(diag_t *d, int line, int col, const char *opt, const char *fmt, ...);
-void     diag_fatal(diag_t *d, const char *fmt, ...);   /* 位置を持たない。mpplc: error: */
-unsigned diag_error_count(const diag_t *d);
-bool     diag_should_stop(const diag_t *d);             /* -fmax-errors に達した */
+typedef struct {
+  diag_config_t cfg;            /* diag_init で複製する */
+  FILE         *out;            /* 出力先。所有しない */
+  unsigned      errors;         /* エラー件数 */
+  bool          limit_reported; /* 打ち切りの行を出したか */
+} diag_t;
 ```
 
-契約:
+警告の件数は持たない。`-Werror` は警告を `errors` に数えるだけで足り、警告件数を読む相手が
+いないため（MISRA 2.x の「使わないものを残さない」に従う）。
 
-- `diag_error` は必ずエラー件数を増やす。`-w` の影響を受けない（警告は消せるがエラーは消せない）。
-- `diag_warning` は `-w` なら何も出さず件数も増やさない。`-Werror` ならエラーとして数える。
-  `opt` は `[-Wunused-variable]` として出す名前。省略できない。
-- `diag_fatal` はコマンドラインやファイル入出力の失敗に使う。行・桁を持たない。
-- **stderr へ書くのは `diag` だけ。** 他のモジュールは `fprintf(stderr, ...)` を呼ばない。
-  診断の書式が 1 箇所で決まるのはこの規約のおかげ。
-- `-fmax-errors` に達したら、打ち切った旨を 1 度だけ出して以降の `diag_error` は黙る。フェーズ
-  側は `diag_should_stop` を見て早めに抜ける «要確認: 文言。gcc は
-  `compilation terminated due to -fmax-errors=N.`»。
+### 関数
 
-書式そのものは外部仕様 [§5](../compiler-spec.md#5-診断メッセージの形式) が正。
+```c
+void diag_init(diag_t *d, const diag_config_t *cfg, FILE *out);
+
+void diag_error(diag_t *d, int line, int col, const char *msg);
+void diag_warning(diag_t *d, int line, int col, const char *opt, const char *msg);
+void diag_fatal(diag_t *d, const char *msg);
+
+unsigned diag_error_count(const diag_t *d);
+bool     diag_should_stop(const diag_t *d);
+```
+
+**可変長引数を使わない**（MISRA 17.1）。メッセージは組み立て済みの文字列として受け取る。
+
+### 呼び側がメッセージを組む
+
+呼ぶ側が `snprintf` で局所バッファに組んでから渡す。
+
+```c
+char msg[DIAG_MSG_MAX];
+(void)snprintf(msg, sizeof msg, "unexpected character '%c'", c);
+diag_error(d, line, col, msg);
+```
+
+この形を選んだ見返りが 2 つある。
+
+- **書式の型検査が無料で付く。** `snprintf` は libc の既知の関数なので、clang が
+  `__attribute__((format))` の指定なしに書式と引数の対応を検査する。自分で可変長引数の関数を
+  作ると、この検査を自分で要求しなければならない。
+- `diag` 側に書式の解釈が一切要らない。
+
+代償は呼び出しが 2 行になることと、各呼び出し点にバッファが立つこと。切り捨ては診断にしか
+影響しないので許容する（`snprintf` は必ず NUL 終端する）。
+
+トークンの綴りは NUL 終端されていないので、`%.*s` と `(int)len` の対で渡す。
+
+```c
+(void)snprintf(msg, sizeof msg, "number out of range: %.*s", (int)tok.len, tok.text);
+```
+
+### 契約
+
+| 関数 | 事前条件 | 事後条件 |
+| ---- | -------- | -------- |
+| `diag_init` | `out` は NULL でない。`cfg->filename` は `d` より長生き | `cfg` を複製し、件数を 0 にする |
+| `diag_error` | `diag_init` 済み | 件数を必ず 1 増やす。`-w` の影響を受けない（警告は消せてもエラーは消せない） |
+| `diag_warning` | 同上、`opt` は NULL でない | `-w` なら何も出さず件数も増やさない。`-Werror` ならエラーとして数える |
+| `diag_fatal` | 同上 | 位置を持たない診断を出し、件数を 1 増やす |
+| `diag_should_stop` | 同上 | `max_errors != 0 && errors >= max_errors` |
+
+`diag_warning` の `opt` は**省略できない**。すべての警告に `[-Wxxx]` が付き、使う人が「この
+警告を消すには何を指定すればよいか」を常に知れる。新しい警告を足すときにオプション名を考える
+ことが強制されるのも狙い。
+
+`-Werror` で昇格した警告は `[-Werror=xxx]` と出す（gcc に倣う）。指定の由来が分かる。
+
+### `-fmax-errors` に達したとき
+
+`diag` は**プロセスを終わらせない**（MISRA 21.8。`exit` を呼ぶのはアリーナの確保失敗だけ）。
+
+1. 上限に達した時点で打ち切りの行を 1 度だけ出す «要確認: 文言。gcc は
+   `compilation terminated due to -fmax-errors=N.`»
+2. 以降の `diag_error` は**何も出さない**（件数は数える）
+3. フェーズ側は `diag_should_stop` を見て早めに抜ける
+
+3 を実装しなくても出力は正しい。抜けるのは無駄な仕事を省くためだけ。進退を決めるのは `main`
+であって `diag` ではない（[段階間の約束](#段階間の約束) の 1）。
+
+### 唯一の出力経路
+
+**stderr へ書くのは `diag` だけ。** 他のモジュールは `fprintf(stderr, ...)` を呼ばない。診断の
+書式が 1 箇所で決まるのはこの規約のおかげ。書式そのものは外部仕様
+[§5](../compiler-spec.md#5-診断メッセージの形式) が正。
 
 ## フェーズの配線
 
