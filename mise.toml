@@ -1,0 +1,90 @@
+# ツールチェーンはユーザーのグローバル mise 設定で固定されている。ここでは [tools] を
+# 宣言せず、タスクだけを定義する。
+
+[env]
+BUILD_DIR = "build"
+
+# --- 日常 ---------------------------------------------------------------
+
+[tasks.build]
+description = "デバッグビルド（警告あり・サニタイザ有効）"
+run = [
+  "cmake -S . -B {{env.BUILD_DIR}} -G Ninja -DCMAKE_BUILD_TYPE=Debug",
+  "cmake --build {{env.BUILD_DIR}}",
+]
+
+[tasks.test]
+description = "テストを走らせる（失敗の出力つき）"
+depends = ["build"]
+run = "ctest --test-dir {{env.BUILD_DIR}} --output-on-failure"
+
+[tasks.run]
+description = "コンパイラを走らせる: mise run run -- examples/hello.src"
+depends = ["build"]
+run = "{{env.BUILD_DIR}}/lppc"
+
+[tasks.clean]
+description = "ビルドディレクトリを消す"
+run = "rm -rf {{env.BUILD_DIR}}"
+
+[tasks.format]
+description = "ソースを整形する（clang-format が必要）"
+run = """
+if ! command -v clang-format >/dev/null; then
+  echo "clang-format がありません。mise で導入を依頼してください（例: mise use -g aqua:llvm/clang-format）" >&2
+  exit 1
+fi
+clang-format -i $(git ls-files '*.c' '*.h')
+"""
+
+# --- 検証 ---------------------------------------------------------------
+# 提出前に `mise run verify` を緑にする。各 leaf は単独でも走る。
+
+[tasks.verify]
+description = "検証一式（fmt + lint + build + test）"
+depends = ["verify:*"]
+
+[tasks.'verify:fmt']
+description = "整形されているか（clang-format が必要）"
+run = """
+if ! command -v clang-format >/dev/null; then
+  echo "clang-format がありません。mise で導入を依頼してください（例: mise use -g aqua:llvm/clang-format）" >&2
+  exit 1
+fi
+clang-format --dry-run --Werror $(git ls-files '*.c' '*.h')
+"""
+
+[tasks.'verify:lint']
+description = "clang 静的解析（Apple clang 同梱）"
+run = """
+set -e
+files=$(git ls-files 'src/*.c')
+[ -n "$files" ] || { echo "src に .c がまだありません"; exit 0; }
+clang --analyze -Xclang -analyzer-output=text -std=c17 -Isrc $files
+"""
+
+[tasks.'verify:build']
+description = "警告をエラーとしてビルド（C に別の型検査器はないのでこれが型検査）"
+run = [
+  "cmake -S . -B {{env.BUILD_DIR}}-verify -G Ninja -DCMAKE_BUILD_TYPE=Release -DLPP_WERROR=ON",
+  "cmake --build {{env.BUILD_DIR}}-verify",
+]
+
+[tasks.'verify:test']
+description = "テスト（サニタイザ有効のデバッグビルドで）"
+depends = ["build"]
+run = "ctest --test-dir {{env.BUILD_DIR}} --output-on-failure"
+
+# --- 提出 ---------------------------------------------------------------
+
+[tasks.'release:check']
+description = "リリース前チェック: 作業ツリーが綺麗で verify が緑か。手順は docs/release.md"
+depends = ["verify"]
+run = """
+if [ -n "$(git status --porcelain)" ]; then
+  echo "作業ツリーが汚れています。コミットしてからリリースしてください。" >&2
+  git status --short >&2
+  exit 1
+fi
+echo "リリース可。次: docs/release.md の手順で tag と gh release を作る。"
+"""
