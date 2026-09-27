@@ -38,7 +38,7 @@ int  source_get(source_t *src);                 /* 1 文字進める。行・桁
 
 | 関数 | 事前条件 | 事後条件 |
 | ---- | -------- | -------- |
-| `source_load` | `src` は未初期化でよい | 成功なら `text` が全文を指し、`pos=0` `line=1` `col=1`。失敗なら `diag_fatal` を呼んで `false` を返す（`src` の中身は不定） |
+| `source_load` | `src` は未初期化でよい | 成功なら `text` が全文を指し、`pos=0` `line=1` `col=1`。失敗なら `diag_error_noloc` を呼んで `false` を返す（`src` の中身は不定） |
 | `source_peek` | `source_load` 済み | 状態を変えない |
 | `source_get` | 同上 | `pos` が 1 文字進み、行・桁が更新される。終端では `pos` を進めず `SOURCE_EOF` を返し続ける |
 
