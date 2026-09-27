@@ -280,14 +280,32 @@ bool options_parse(options_t *opt, int argc, char **argv, diag_t *d);
 - `-fmax-errors=` は `=` の後を数値に変換する。空・非数値・負数はエラー。
 - 未知オプション → `mpplc: error: unrecognized command-line option '-Xfoo'`。
 - 出力名の導出は `.mpl` → `.csl`。拡張子が `.mpl` でないときの導出規則 «要確認: 末尾に足すか、
-  最後の `.` 以降を置き換えるか»。
+  最後の `.` 以降を置き換えるか»。段階4 まで使わないので後回しにできる。
 - 要求フェーズは、指定された dump 系のうち**最も深いもの**（[architecture.md](architecture.md#フェーズの配線)）。
+  どれも指定されていなければ `MPPLC_LAST_IMPLEMENTED_PHASE`。
+- `--` は不明なオプションとして扱う（外部仕様 §2.4）。特別扱いしない。
+- 拡張子が `.mpl` でないときの警告は `-Wbad-file-extension` の名前で出す。既定で有効。
 
-### 未確定 «要確認»
+### 段階1 で受け付けるオプション
 
-- `--version` が出す文字列
-- `--` の扱い（外部仕様に記述がない）
-- 拡張子警告を抑止するオプション名。`-w` で消えるべきか
+`--help` に載せるものと一致させる（外部仕様 §2.3）。これ以外を渡したら不明オプションのエラー。
+
+| オプション | `options_t` のどこへ |
+| ---------- | -------------------- |
+| `--dump-tokens` | `dump_tokens` |
+| `-w` | `no_warnings` |
+| `-Werror` | `warnings_are_errors` |
+| `-fmax-errors=<n>` | `max_errors` |
+| `-h` / `--help` | 即座に使い方を出して終了コード 0 |
+| `--version` | 即座に `mpplc 0.1.0` を出して終了コード 0 |
+
+`--help` と `--version` は**入力ファイルの検証より先に処理する**。`mpplc --help` は入力ファイル
+なしでも成功しなければならない。
+
+### 終了コードの注意
+
+外部仕様 §6 では**コマンドラインの誤りも 1**。現在の `src/main.c` のスタブは引数なしで 2 を
+返しているので、ここで 1 に直す。
 
 ---
 
