@@ -178,9 +178,13 @@ typedef struct {
 ```c
 void diag_init(diag_t *d, const diag_config_t *cfg, FILE *out);
 
+/* ソース中の位置を持つ診断 */
 void diag_error(diag_t *d, int line, int col, const char *msg);
 void diag_warning(diag_t *d, int line, int col, const char *opt, const char *msg);
-void diag_fatal(diag_t *d, const char *msg);
+
+/* 位置を持たない診断（コマンドラインやファイル入出力について） */
+void diag_error_noloc(diag_t *d, const char *msg);
+void diag_warning_noloc(diag_t *d, const char *opt, const char *msg);
 
 unsigned diag_error_count(const diag_t *d);
 bool     diag_should_stop(const diag_t *d);
@@ -221,7 +225,8 @@ diag_error(d, line, col, msg);
 | `diag_init` | `out` は NULL でない。`cfg->filename` は `d` より長生き | `cfg` を複製し、件数を 0 にする |
 | `diag_error` | `diag_init` 済み | 件数を必ず 1 増やす。`-w` の影響を受けない（警告は消せてもエラーは消せない） |
 | `diag_warning` | 同上、`opt` は NULL でない | `-w` なら何も出さず件数も増やさない。`-Werror` ならエラーとして数える |
-| `diag_fatal` | 同上 | 位置を持たない診断を出し、件数を 1 増やす |
+| `diag_error_noloc` | 同上 | 位置なしのエラーを出し、件数を 1 増やす |
+| `diag_warning_noloc` | 同上、`opt` は NULL でない | 位置なしの警告。`-w` と `-Werror` の扱いは `diag_warning` と同じ |
 | `diag_should_stop` | 同上 | `max_errors != 0 && errors >= max_errors` |
 
 `diag_warning` の `opt` は**省略できない**。すべての警告に `[-Wxxx]` が付き、使う人が「この
@@ -292,13 +297,13 @@ typedef enum { PHASE_LEX, PHASE_PARSE, PHASE_SEMANTIC, PHASE_CODEGEN } phase_t;
 
 `main` の流れ:
 
-1. `options` を解析。失敗 → `diag_fatal` → 1
+1. `options` を解析。失敗 → `diag_error_noloc` → 1
 2. 入力ファイル数と拡張子を検証（0 個 / 2 個以上 → 1）
 3. `arena` を作り、`diag` を初期化する
 4. `source` を読み込む。失敗 → 1
 5. 要求フェーズを決める
 6. 実装済みフェーズまで順に走らせる。各フェーズの後で `diag_error_count() > 0` なら中断
-7. 要求フェーズ > `MPPLC_LAST_IMPLEMENTED_PHASE` なら「未実装」を `diag_fatal` → 1
+7. 要求フェーズ > `MPPLC_LAST_IMPLEMENTED_PHASE` なら「未実装」を `diag_error_noloc` → 1
 8. 終了コードは、エラー件数 > 0 なら 1、なければ 0
 
 段階が進むたびの変更は**「定数を 1 つ進める」「フェーズ関数を 1 本足す」の 2 つだけ**。スタブが
