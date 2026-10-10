@@ -41,9 +41,18 @@ MPPL で書かれたソースファイル 1 つを読み込み、CASL2 のアセ
 | 3（意味解析） | 交差参照表（予定） |
 | 4（コード生成） | CASL2（`-o` か既定のファイル名へ） |
 
-**未実装のフェーズを明示的に要求したときだけエラーになる。** 段階1 の時点で `--dump-ast` を
-渡すと `mpplc: error: parsing is not implemented yet` を出して終了コード 1。オプションなしでは
-このエラーは出ない。
+**未実装のフェーズを明示的に要求したときだけエラーになる。** オプションなしではこのエラーは
+出ない。文言は `mpplc: error: <フェーズ> is not implemented yet` で、終了コードは 1。
+
+| 要求フェーズ | `<フェーズ>` | これを要求するオプション |
+|---|---|---|
+| 字句解析 | `lexical analysis` | `--dump-tokens` |
+| 構文解析 | `parsing` | `--dump-ast` |
+| 意味解析 | `semantic analysis` | `--dump-symtab` / `-fsyntax-only` |
+| コード生成 | `code generation` | `-S` |
+
+段階1 の時点なら、`--dump-ast` で `mpplc: error: parsing is not implemented yet`、
+`-fsyntax-only` で `mpplc: error: semantic analysis is not implemented yet` になる。
 
 `-S` は「CASL2 を出力したところで止める」なので、段階4 未満では未実装エラーになる。
 
