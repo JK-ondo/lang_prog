@@ -1,0 +1,1 @@
+mpplc: error: input file 'empty.txt' does not end in '.mpl' [-Werror=bad-file-extension]
