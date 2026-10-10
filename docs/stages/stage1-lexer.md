@@ -120,15 +120,15 @@
 | ---- | ------ | ---- | -- | ---- | ------------ | ---- |
 | W | `help` | `--help` | 0 | out | 使い方が §2.3 の本文と完全一致 | §2.3 |
 | W | `version` | `--version` | 0 | out | `mpplc 0.1.0` の 1 行 | §2.2 |
-| W | `no-input` | （空） | 1 | err | 診断 1 行のみ。**usage を出さない** | §2.3, §6 |
+| W | `no-input` | （空） | 1 | out(空), err | 診断 1 行のみ。**usage を出さない** | §2.3, §6 |
 | W | `multi-input` | `one.mpl two.mpl` | 1 | out(空), err | **両方の**ファイル名を挙げる | §3.1, §6 |
 | W | `unknown-option` | `-Xfoo` | 1 | out(空), err | 不明オプション。入力ファイルなしより**先に**報告する | §2.4 |
 | W | `dash-dash` | `-- one.mpl` | 1 | out(空), err | `--` を不明オプションとして拒否 | §2.4 |
 | W | `bad-extension` | `empty.txt` | 0 | out(空), err | 警告を出すがコンパイルは続行 | §3.1, §4.3 |
-| | `bad-extension-w` | `-w empty.txt` | 0 | out(空), err(空) | `-w` で警告が消える | §4.3 |
-| | `bad-extension-werror` | `-Werror empty.txt` | 1 | out(空), err | `-Werror` で終了コードが 1 になる | §4.3 |
-| | `not-implemented` | `--dump-ast one.mpl` | 1 | out(空), err | 未実装フェーズの要求を拒否 | §2.1 |
-| | `help-wins` | `--help one.mpl` | 0 | out | `--help` は入力の検証より先に処理され成功する | §2.3 |
+| W | `bad-extension-w` | `-w empty.txt` | 0 | out(空), err(空) | `-w` で警告が消える | §4.3 |
+| W | `bad-extension-werror` | `-Werror empty.txt` | 1 | out(空), err | `-Werror` で終了コードが 1 になる | §4.3 |
+| W | `not-implemented` | `--dump-ast one.mpl` | 1 | out(空), err | 未実装フェーズの要求を拒否 | §2.1 |
+| W | `help-wins` | `--help one.mpl` | 0 | out | `--help` は入力の検証より先に処理され成功する | §2.3 |
 
 `bad-extension-w` の `err(空)` が肝心。**`-w` を付けたら標準エラーが空になること**を検査しないと、
 警告が消えたことを確かめられない。
