@@ -5,28 +5,23 @@
 
 #include "diag.h"
 
-typedef enum {
-    PHASE_LEX,
-    PHASE_PARSE,
-    PHASE_SEMANTIC,
-    PHASE_CODEGEN
-}phase_t;
+typedef enum { PHASE_LEX, PHASE_PARSE, PHASE_SEMANTIC, PHASE_CODEGEN } phase_t;
 
 #define MPPLC_LAST_IMPLEMENTED_PHASE PHASE_LEX
 
 typedef struct {
-    const char *input;      /* input-file NULLなら無指定 */
-    phase_t requested;      /* 課題の要求フェーズ */
-    bool dump_tokens;        /* --dump-tokens */
-    bool no_warnings;        /* -w */
-    bool warnings_are_errors;/* -Werror */
-    unsigned max_errors;    /* -fmax-errors=n 0なら無制限 */
-}options_t;
+  const char *input;        /* input-file NULLなら無指定 */
+  phase_t requested;        /* 課題の要求フェーズ */
+  bool dump_tokens;         /* --dump-tokens */
+  bool no_warnings;         /* -w */
+  bool warnings_are_errors; /* -Werror */
+  unsigned max_errors;      /* -fmax-errors=n 0なら無制限 */
+} options_t;
 
 typedef enum {
-    OPTIONS_OK,         /* 続行する */
-    OPTIONS_FINISHED,   /* --help / --version を出した。終了コード０ */
-    OPTIONS_ERROR       /* 診断ずみ。終了コード１ */
+  OPTIONS_OK,       /* 続行する */
+  OPTIONS_FINISHED, /* --help / --version を出した。終了コード０ */
+  OPTIONS_ERROR     /* 診断ずみ。終了コード１ */
 } options_status_t;
 
 /*
@@ -37,4 +32,4 @@ typedef enum {
  */
 options_status_t options_parse(options_t *opt, int argc, char **argv, diag_t *d);
 
-#endif  /* MPPLC_OPTIONS_H */
+#endif /* MPPLC_OPTIONS_H */
