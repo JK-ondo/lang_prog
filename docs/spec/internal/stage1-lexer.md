@@ -307,8 +307,24 @@ typedef struct {
   /* 個別の警告、-O、-fsanitize など段階ごとに足す */
 } options_t;
 
-bool options_parse(options_t *opt, int argc, char **argv, diag_t *d);
+typedef enum {
+  OPTIONS_OK,       /* 続行する */
+  OPTIONS_FINISHED, /* --help / --version を出した。終了コードは 0 */
+  OPTIONS_ERROR     /* 診断は済んでいる。終了コードは 1 */
+} options_status_t;
+
+options_status_t options_parse(options_t *opt, int argc, char **argv, diag_t *d);
 ```
+
+**この構造体は段階4 までの分を並べているが、各段階では使うフィールドだけを書く。** 段階1 で
+書くのは `input` / `requested` / `dump_tokens` / `no_warnings` / `warnings_are_errors` /
+`max_errors` の 6 つ。使わないフィールドを先に置くと、埋める責任のない場所が増える（MISRA 2.x
+「使わないものを残さない」）。`-o` を受け付ける段階4 で `output` を足す。
+
+**戻り値が `bool` ではなく 3 値なのは、結末が 3 つあるため。** `--help` と `--version` は
+「成功して終了コード 0 で終わる」ので、「続行」とも「エラー」とも違う。`bool` + `options_t` の
+フラグでも書けるが、フラグを読み忘れると `--help` が入力ファイルの検証に進んでしまう。
+**結末を型に出して、取りこぼしを `switch` の網羅性検査に任せる。**
 
 ### 注意点
 
