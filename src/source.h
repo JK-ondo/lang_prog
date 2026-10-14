@@ -11,12 +11,12 @@
 #define SOURCE_EOF (-1)
 
 typedef struct {
-    const char * filename;  /* 診断に出す名前。所有しない */
-    const char * text;      /* アリーナ上の全文。NUL終端済み */
-    size_t len;             /* NULを含まない長さ */
-    size_t pos;             /* 次に読む位置。0<=pos<=len */
-    int line;               /* 次に読む文字の行。１起点 */
-    int col;                /* 次に読む文字の桁。１起点 */
+  const char *filename; /* 診断に出す名前。所有しない */
+  const char *text;     /* アリーナ上の全文。NUL終端済み */
+  size_t len;           /* NULを含まない長さ */
+  size_t pos;           /* 次に読む位置。0<=pos<=len */
+  int line;             /* 次に読む文字の行。１起点 */
+  int col;              /* 次に読む文字の桁。１起点 */
 } source_t;
 
 /*
@@ -39,7 +39,7 @@ int source_peek(const source_t *src);
  * 事前条件：source_load済み。
  * 事後条件：状態を変えない。
  */
-int source_peek2(const source_t * src);
+int source_peek2(const source_t *src);
 
 /*
  * １文字進めて、その文字を返す
