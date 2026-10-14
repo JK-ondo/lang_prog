@@ -24,6 +24,16 @@ static _Noreturn void die(void) {
   exit(1);
 }
 
+/* アリーナを作る。失敗すると落ちるので、戻り値は必ず非NULL */
+arena_t *arena_create(void) {
+  arena_t *a = malloc(sizeof *a);
+  if (a == NULL) {
+    die();
+  }
+  a->head = NULL;
+  return a;
+}
+
 /*
  * sizeバイトを返す。max_align_t境界に整列している。
  * 失敗したら落ちるので。呼び出し側はNULLチェックしない。
@@ -75,14 +85,4 @@ void arena_destroy(arena_t *a) {
     free(p);
   }
   free(a);
-}
-
-/* アリーナを作る。失敗すると落ちるので、戻り値は必ず非NULL */
-arena_t *arena_create(void) {
-  arena_t *a = malloc(sizeof *a);
-  if (a == NULL) {
-    die();
-  }
-  a->head = NULL;
-  return a;
 }
