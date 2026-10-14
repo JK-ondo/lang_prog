@@ -344,6 +344,38 @@ mpplc: warning: input file 'foo.txt' does not end in '.mpl' [-Wbad-file-extensio
 区別できる。
 - コマンドラインに関するもの：`mpplc: error: メッセージ`（位置を持たないので行・桁は付かない）
 
+### 5.0 入力ファイルを開けないとき
+
+`cannot open '<ファイル名>': <理由>` を出して終了コード 1。`<理由>` は `strerror(errno)` の
+文字列をそのまま書く。
+
+```
+mpplc: error: cannot open 'foo.mpl': No such file or directory
+mpplc: error: cannot open 'foo.mpl': Permission denied
+```
+
+開けたのに読めなかったときは `cannot read` にする。理由は `ferror` が真のときだけ添える
+（短い読み取りでは `errno` が設定されないことがある）。
+
+```
+mpplc: error: cannot read 'src': Is a directory
+mpplc: error: cannot read 'foo.mpl'
+```
+
+**ディレクトリを渡した場合はこちらに落ちる。** `fopen` と `fseek` と `ftell` は成功し（`ftell` は
+ディレクトリの大きさを返す）、`fread` が `EISDIR` で失敗する（実測）。「開けない」ではなく
+「読めない」なのは、この順序の帰結。
+
+**ファイル名は引用符で囲む。** gcc は囲まない（`gcc: error: foo.c: No such file or directory`）
+が、このコンパイラの他の診断——`input file 'empty.txt' does not end in '.mpl'`、
+`unrecognized command-line option '-Xfoo'`——が引用符で囲んでいるので、そちらに揃える。
+**自分の出力の中の一貫性を、他の処理系との一致より優先する。**
+
+理由を添えるのは、「存在しない」と「権限がない」と「ディレクトリだった」を区別できないと、
+使う人が次に何をすべきか分からないため。`strerror` の文字列は POSIX が綴りを定めているものが
+多く、`ENOENT` / `EACCES` / `EISDIR` は macOS と Linux (glibc) で一致する（実測）。
+`setlocale` を呼ばないので訳されることもない。
+
 ### 5.1 `-fmax-errors` による打ち切り
 
 `-fmax-errors=<n>` の上限に達したら、その時点で**一度だけ**次の行を標準エラーに出す。
