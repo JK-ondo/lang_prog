@@ -352,14 +352,23 @@ typedef enum { PHASE_LEX, PHASE_PARSE, PHASE_SEMANTIC, PHASE_CODEGEN } phase_t;
 
 `main` の流れ:
 
-1. `options` を解析。失敗 → `diag_error_noloc` → 1
-2. 入力ファイル数と拡張子を検証（0 個 / 2 個以上 → 1）
-3. `arena` を作り、`diag` を初期化する
-4. `source` を読み込む。失敗 → 1
-5. 要求フェーズを決める
-6. 実装済みフェーズまで順に走らせる。各フェーズの後で `diag_error_count() > 0` なら中断
-7. 要求フェーズ > `MPPLC_LAST_IMPLEMENTED_PHASE` なら「未実装」を `diag_error_noloc` → 1
-8. 終了コードは、`diag_error_count() > 0` なら 1、なければ 0
+1. **`diag` を立てる**（まだ `-w` も `-Werror` も分からないので既定値で）
+2. `options_parse`。入力ファイル数（0 個 / 2 個以上）と不明オプションと要求フェーズの決定は
+   この中。`OPTIONS_FINISHED` → 0、`OPTIONS_ERROR` → 1
+3. `options_t` の設定を `diag_config_t` に写して **`diag` を作り直す**
+4. 拡張子を検証（`.mpl` でなければ `-Wbad-file-extension` の警告。続行する）
+5. 要求フェーズ > `MPPLC_LAST_IMPLEMENTED_PHASE` なら「未実装」を `diag_error_noloc` → 1
+6. `arena` を作り、`source` を読み込む。失敗 → 1
+7. 実装済みフェーズまで順に走らせる。各フェーズの後で `diag_error_count() > 0` なら中断
+8. `arena_destroy`。終了コードは `diag_error_count() > 0` なら 1、なければ 0
+
+**`diag` を 2 回立てるのは、`-w` と `-Werror` が `options_parse` の中で決まるため。** 解析中の
+診断（不明オプション、入力ファイルの個数）には `-w` が効かないが、それでよい——`-w` は警告に
+しか効かず、解析中に出るのはエラーだけ。
+
+**未実装の判定（5）を `source` の読み込み（6）より前に置く。** 応えられない要求のために
+ファイルを開く必要がない。`mpplc --dump-ast nosuch.mpl` は「存在しない」ではなく
+「parsing is not implemented yet」と答える。
 
 段階が進むたびの変更は**「定数を 1 つ進める」「フェーズ関数を 1 本足す」の 2 つだけ**。スタブが
 後で消すゴミにならないのが、この形を選んだ理由。
