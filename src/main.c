@@ -9,13 +9,18 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "arena.h"
 #include "diag.h"
+#include "lexer.h"
 #include "options.h"
+#include "source.h"
+#include "token.h"
 
 /*
  * 要求フェーズ->未実装エラーに出す名前
- * 外部仕様 ss2.1の表
+ * 外部仕様 §2.1の表
  */
+
 static const char *phase_name(phase_t p) {
   switch (p) {
   case PHASE_LEX:
@@ -40,6 +45,50 @@ static void warn_bad_extension(diag_t *d, const char *path) {
     char msg[DIAG_MSG_MAX];
     (void)snprintf(msg, sizeof msg, "input file '%s' does not end in '.mpl'", path);
     diag_warning_noloc(d, "bad-file-extension", msg);
+  }
+}
+
+static void dump_token(FILE *out, const token_t *tok) {
+  (void)fprintf(out, "%d:%d\t%s", tok->line, tok->col, token_kind_symbol(tok->kind));
+  if (tok->kind == TOK_EOF) {
+    (void)fprintf(out, "\n");
+    return;
+  }
+  if (tok->kind == TOK_STRING) {
+    (void)fprintf(out, "\t%zu '", tok->value.str.len);
+    for (size_t i = 0; i < tok->value.str.len; i++) {
+      char ch = tok->value.str.s[i];
+      switch (ch) {
+      case '\'':
+        (void)fputs("\\'", out);
+        break;
+      case '\t':
+        (void)fputs("\\t", out);
+        break;
+      case '\\':
+        (void)fputs("\\\\", out);
+        break;
+      default:
+        (void)fputc(ch, out);
+        break;
+      }
+    }
+    (void)fputs("\n", out);
+  } else {
+    (void)fprintf(out, "\t%.*s\n", (int)tok->len, tok->text);
+  }
+}
+
+static void run_lex(const options_t *opt, lexer_t *lx) {
+  for (;;) {
+    token_t tok = lexer_next(lx);
+    if (opt->dump_tokens) {
+      dump_token(stdout, &tok);
+    }
+
+    if (tok.kind == TOK_EOF) {
+      break;
+    }
   }
 }
 
@@ -77,7 +126,18 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  /* 字句解析 */
+  arena_t *a = arena_create();
+  source_t src;
+  if (!source_load(&src, opt.input, a, &d)) {
+    arena_destroy(a);
+    return 1;
+  }
+
+  lexer_t lx;
+  lexer_init(&lx, &src, a, &d);
+  run_lex(&opt, &lx);
+
+  arena_destroy(a);
 
   return diag_error_count(&d) > 0 ? 1 : 0;
 }
