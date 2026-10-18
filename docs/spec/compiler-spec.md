@@ -394,6 +394,45 @@ compilation terminated due to -fmax-errors=2.
 嘘になる。`-Werror` で昇格した警告も、昇格していない警告も同じく出さない。終了コードは
 エラーの数で決まるので、出力をやめても 1 になることは変わらない（§6）。
 
+### 5.2 字句エラーの文言
+
+いずれも位置を持つエラーで、終了コードは 1。位置は問題のあるトークンの先頭を指す
+（閉じ忘れは**開いた位置**を指す。終わりの位置を見せても直せない）。
+
+| 状況 | メッセージ |
+| ---- | ---------- |
+| 符号なし整数が 32768 を超える | `number out of range: <綴り>` |
+| 文字列が行末までに閉じない | `string is not closed before end of line` |
+| 文字列がファイル末尾までに閉じない | `string is not closed before end of file` |
+| MPPL に無い表示文字 | `'<文字>' cannot be used in MPPL` |
+| 表示文字でない制御コード | `control character 0x<16進2桁> cannot be used in MPPL` |
+| `/` の次が `*` でない | `'/' must be followed by '*' to start a comment` |
+
+```
+foo.mpl:1:1: error: number out of range: 32769
+foo.mpl:3:10: error: string is not closed before end of line
+foo.mpl:5:4: error: string is not closed before end of file
+foo.mpl:7:5: error: '@' cannot be used in MPPL
+foo.mpl:8:1: error: control character 0x07 cannot be used in MPPL
+foo.mpl:9:8: error: '/' must be followed by '*' to start a comment
+```
+
+制御コードは**16 進 2 桁の小文字**で書く（`0x07`、`0x0b`）。画面に出ない文字をそのまま
+出力に混ぜると、何が問題なのか分からなくなる。タブと改行は制御コードだが分離子なので
+ここには来ない。
+
+`/` だけ文言が違うのは、**使う人の間違いが 1 通りに絞れる**ため。MPPL に `/` 単独の意味は
+無く（除算は `div`）、書く理由は注釈を開こうとして `*` を忘れたか、他の言語の除算を持ち
+込んだかに限られる。前者なら次にすることがそのまま書いてある。
+
+文字列の 2 つを「閉じていない」の 1 文に揃えたのは、**使う人がすることが同じ**だから——
+開き `'` を見に行って閉じを足す。改行とファイル末尾を書き分けるのは、どこまで探したかを
+示して開き `'` の見当を付けやすくするため。`unterminated string` のような名詞句より長いが、
+診断は短さより次の行動が分かることを優先する。
+
+整数のほうが `: <綴り>` を添えるのは、**書いた値そのものが問題**なので見せる必要があるため。
+文字列は綴りを見せても助けにならない（長いことがあり、途中で切れる）。
+
 ## 6. 終了コード
 
 | 値 | 意味 |
