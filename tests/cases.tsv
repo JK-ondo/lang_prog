@@ -23,17 +23,17 @@ P	stage1-lexer	分離子	sep-comment-brace	{abc}	--dump-tokens	0	out, err空	{ }
 P	stage1-lexer	分離子	sep-comment-slash	/*abc*/	--dump-tokens	0	out, err空	/* */ 形式を飛ばし、閉じの / も消費する	字句「注釈」
 P	stage1-lexer	分離子	sep-comment-slash-only	/*/	--dump-tokens	0	out, err空	/*/ は閉じていない。開いた直後の * を終端と誤認しない	字句「注釈」
 P	stage1-lexer	分離子	sep-comment-stars	/***/	--dump-tokens	0	out, err空	**/ で閉じる	字句「注釈」
-P	stage1-lexer	分離子	sep-comment-not-nested	{a{b}+	--dump-tokens	0	out, err空	入れ子にしない。最初の } で閉じ、+ が残る。8d で期待値が変わる	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-not-nested	{a{b}+	--dump-tokens	0	out, err空	入れ子にしない。最初の } で閉じ、+ が PLUS として残る	字句「注釈」
 P	stage1-lexer	分離子	sep-comment-multiline	{a\nb}	--dump-tokens	0	out, err空	注釈が改行をまたげる。中の改行でも行が進む	字句「注釈」
 P	stage1-lexer	分離子	sep-comment-unclosed-brace	{abc	--dump-tokens	0	out, err空	閉じないまま EOF でもエラーにならない。err が空であることが主張	字句「注釈」（課題文の明示）
 P	stage1-lexer	分離子	sep-comment-unclosed-slash	/*abc	--dump-tokens	0	out, err空	閉じないまま EOF でもエラーにならない	字句「注釈」（課題文の明示）
 P	stage1-lexer	分離子	sep-mixed	{a} /*b*/	--dump-tokens	0	out, err空	空白と注釈が交互に続いても飛ばしきる（外側ループ）	字句「分離子」
 P	stage1-lexer	認識	keywords	program var array of begin end if then else procedure return call while do not or div and char integer boolean readln writeln true false read write break	--dump-tokens	0	out	キーワード 28 語すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
-W	stage1-lexer	認識	symbols	+ - * = <> < <= > >= ( ) [ ] := . , : ;	--dump-tokens	0	out	記号 18 個すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
+P	stage1-lexer	認識	symbols	+ - * = <> < <= > >= ( ) [ ] := . , : ;	--dump-tokens	0	out	記号 18 個すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
 P	stage1-lexer	認識	name-vs-keyword	begin BEGIN Begin bEGiN	--dump-tokens	0	out	begin はキーワード、Begin は名前（大小を区別）	受入基準「トークンの認識」
 -	stage1-lexer	認識	name-forms	a b2 Xyz longlongname CamelCase	--dump-tokens	0	out	実体が違う名前がすべて NAME に集まる	出力仕様「同一視」
 -	stage1-lexer	認識	name-underscore	?	既定	1	out空, err	_ は名前に使えず字句エラーになる	字句「名前」
-W	stage1-lexer	最長一致	longest-symbols	<= <> >= :=	--dump-tokens	0	out	<= <> >= := が各 1 トークン。< = に割れない	最長一致規則
+P	stage1-lexer	最長一致	longest-symbols	<= <> >= :=	--dump-tokens	0	out	<= <> >= := が各 1 トークン。< = に割れない	最長一致規則
 P	stage1-lexer	最長一致	longest-keywords	readln writeln	--dump-tokens	0	out	readln writeln が read+ln に割れない	最長一致規則
 -	stage1-lexer	最長一致	longest-quotes	?	--dump-tokens	0	out	'''' が STRING 1 個（2 個ではない）。'' も 1 個	最長一致規則
 -	stage1-lexer	最長一致	string-length	'''' 'don''t'	--dump-tokens	0	out	'''' の長さが 1、'don''t' が 5	不変条件（課題3 で使う）
@@ -41,9 +41,9 @@ W	stage1-lexer	文字列	string-forms	'' 'a' 'don''t'	--dump-tokens	0	out	'' 'a'
 -	stage1-lexer	文字列	string-tab	?	--dump-tokens	0	out	タブを含められる	字句「文字列」
 -	stage1-lexer	文字列	string-unterminated	?	既定	1	out空, err	EOF に達したらエラー（注釈と扱いが違う）	字句「文字列」
 -	stage1-lexer	文字列	string-newline	?	既定	1	out空, err	改行が来たらエラー。位置は開き '	字句「文字列」
-W	stage1-lexer	整数	number-forms	0 007 32768	--dump-tokens	0	out	0 007（7 として）32768 が通る	字句「符号なし整数」
-W	stage1-lexer	整数	number-over	32769	既定	1	out空, err	32769 がエラー。32767 が上限ではない	字句「符号なし整数」
-W	stage1-lexer	整数	number-huge	99999999999999	既定	1	out空, err	99999999999999 で整数があふれず範囲外エラーになる	字句「符号なし整数」
+P	stage1-lexer	整数	number-forms	0 007 32768	--dump-tokens	0	out	0 007（7 として）32768 が通る	字句「符号なし整数」
+P	stage1-lexer	整数	number-over	32769	既定	1	out空, err	32769 がエラー。32767 が上限ではない	字句「符号なし整数」
+P	stage1-lexer	整数	number-huge	99999999999999	既定	1	out空, err	99999999999999 で整数があふれず範囲外エラーになる	字句「符号なし整数」
 -	stage1-lexer	エラー	bad-char	?	既定	1	out空, err	@ が位置つきでエラー。黙って飛ばさない	字句エラー一覧
 -	stage1-lexer	エラー	control-code	?	既定	1	out空, err	表示文字でない制御コードがエラー	字句エラー一覧
 -	stage1-lexer	エラー	slash-alone	?	既定	1	out空, err	/ の次が * でないときエラー。lexer.c の peek2 == '*' の偽側もここで埋まる	字句エラー一覧
