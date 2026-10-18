@@ -37,6 +37,35 @@ static token_t lex_name(lexer_t *lx, token_t tok) {
 }
 
 /*
+ * 数値を読み取る
+ * 事前条件：トークンの先頭が数字である
+ */
+static token_t lex_number(lexer_t *lx, token_t tok) {
+  const char *start = lx->src->text + lx->src->pos;
+  unsigned value = 0;
+  bool over = false;
+  while (is_digit(source_peek(lx->src))) {
+    int c = source_get(lx->src);
+    if (!over) {
+      value = value * 10u + (unsigned)(c - '0');
+      if (value > MPPL_NUMBER_MAX) {
+        over = true;
+      }
+    }
+  }
+  tok.kind = TOK_NUMBER;
+  tok.text = start;
+  tok.len = (size_t)(lx->src->text + lx->src->pos - start);
+  tok.value.number = over ? 0u : value;
+  if (over) {
+    char msg[DIAG_MSG_MAX];
+    (void)snprintf(msg, sizeof msg, "number out of range: %.*s", (int)tok.len, tok.text);
+    diag_error(lx->diag, tok.line, tok.col, msg);
+  }
+  return tok;
+}
+
+/*
  * 次のトークンを１つ返す。
  */
 token_t lexer_next(lexer_t *lx) {
@@ -88,6 +117,9 @@ token_t lexer_next(lexer_t *lx) {
   }
   if (is_letter(c)) {
     return lex_name(lx, tok);
+  }
+  if (is_digit(c)) {
+    return lex_number(lx, tok);
   }
 
   return tok;

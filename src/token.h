@@ -66,6 +66,9 @@
   X(TOK_NUMBER, "NUMBER", "NUMBER")                                                                \
   X(TOK_STRING, "STRING", "STRING")
 
+/* MPPL の符号なし整数の上限。-32768 を書くために 32767 ではなく 32768 */
+#define MPPL_NUMBER_MAX 32768u
+
 #define X(kind, symbol, spelling) kind,
 typedef enum { TOKEN_KINDS(X) TOK_KIND_COUNT } token_kind_t;
 #undef X
