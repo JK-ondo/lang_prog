@@ -66,6 +66,85 @@ static token_t lex_number(lexer_t *lx, token_t tok) {
 }
 
 /*
+ * 記号を読み取る
+ * 事前条件：終端でない、英数字でない
+ */
+static token_t lex_symbol(lexer_t *lx, token_t tok) {
+  const char *start = lx->src->text + lx->src->pos;
+  int c = source_get(lx->src);
+
+  switch (c) {
+  case '+':
+    tok.kind = TOK_PLUS;
+    break;
+  case '-':
+    tok.kind = TOK_MINUS;
+    break;
+  case '*':
+    tok.kind = TOK_STAR;
+    break;
+  case '=':
+    tok.kind = TOK_EQUAL;
+    break;
+  case '>':
+    if (source_peek(lx->src) == '=') {
+      (void)source_get(lx->src);
+      tok.kind = TOK_GREQ;
+    } else {
+      tok.kind = TOK_GR;
+    }
+    break;
+  case '<':
+    if (source_peek(lx->src) == '=') {
+      (void)source_get(lx->src);
+      tok.kind = TOK_LEEQ;
+    } else if (source_peek(lx->src) == '>') {
+      (void)source_get(lx->src);
+      tok.kind = TOK_NOTEQ;
+    } else {
+      tok.kind = TOK_LE;
+    }
+    break;
+  case '(':
+    tok.kind = TOK_LPAREN;
+    break;
+  case ')':
+    tok.kind = TOK_RPAREN;
+    break;
+  case '[':
+    tok.kind = TOK_LSQPAREN;
+    break;
+  case ']':
+    tok.kind = TOK_RSQPAREN;
+    break;
+  case '.':
+    tok.kind = TOK_DOT;
+    break;
+  case ',':
+    tok.kind = TOK_COMMA;
+    break;
+  case ':':
+    if (source_peek(lx->src) == '=') {
+      (void)source_get(lx->src);
+      tok.kind = TOK_ASSIGN;
+    } else {
+      tok.kind = TOK_COLON;
+    }
+    break;
+  case ';':
+    tok.kind = TOK_SEMI;
+    break;
+  default:
+    /* MPPL に無い文字。報告は未実装で、いまは終端として扱う */
+    return tok;
+  }
+
+  tok.text = start;
+  tok.len = (size_t)(lx->src->text + lx->src->pos - start);
+  return tok;
+}
+
+/*
  * 次のトークンを１つ返す。
  */
 token_t lexer_next(lexer_t *lx) {
@@ -121,6 +200,5 @@ token_t lexer_next(lexer_t *lx) {
   if (is_digit(c)) {
     return lex_number(lx, tok);
   }
-
-  return tok;
+  return lex_symbol(lx, tok);
 }
