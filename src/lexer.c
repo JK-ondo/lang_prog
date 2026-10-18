@@ -145,6 +145,75 @@ static token_t lex_symbol(lexer_t *lx, token_t tok) {
 }
 
 /*
+ * 文字列を読み取る
+ * 事前条件：トークンの先頭が'である
+ */
+static token_t lex_string(lexer_t *lx, token_t tok) {
+  const char *start = lx->src->text + lx->src->pos; /* 開始記号 ' を含む綴りの先頭 */
+  (void)source_get(lx->src);                        /* 開始記号を消化 */
+  const char *body = lx->src->text + lx->src->pos;  /* 文字列の本体 */
+
+  size_t len = 0;     /* ''を'に丸めた後の文字数 */
+  size_t doubled = 0; /* ''の出現数 */
+  bool closed = false;
+  bool at_newline = false;
+
+  for (;;) {
+    int c = source_peek(lx->src);
+    if (c == SOURCE_EOF || c == '\n') {
+      at_newline = (c == '\n');
+      break; /* closed はfalseのまま改行は消化しない */
+    }
+    (void)source_get(lx->src);
+    if (c != '\'') {
+      len++;
+      continue;
+    }
+    if (source_peek(lx->src) == '\'') {
+      (void)source_get(lx->src);
+      len++;
+      doubled++;
+      continue;
+    }
+    closed = true;
+    break;
+  }
+
+  tok.kind = TOK_STRING;
+  tok.text = start;
+  tok.len = (size_t)(lx->src->text + lx->src->pos - start);
+
+  if (!closed) {
+    char msg[DIAG_MSG_MAX];
+    (void)snprintf(msg, sizeof msg, "string is not closed before end of %s",
+                   at_newline ? "line" : "file");
+    diag_error(lx->diag, tok.line, tok.col, msg);
+    tok.value.str.s = "";
+    tok.value.str.len = 0;
+    return tok;
+  }
+
+  if (doubled == 0) {
+    tok.value.str.s = body;
+    tok.value.str.len = len;
+    return tok;
+  }
+
+  size_t raw = (size_t)(lx->src->text + lx->src->pos - 1 - body);
+  char *buf = arena_alloc(lx->arena, len);
+  size_t w = 0;
+  for (size_t i = 0; i < raw; i++) {
+    buf[w++] = body[i];
+    if (body[i] == '\'') {
+      i++;
+    }
+  }
+  tok.value.str.s = buf;
+  tok.value.str.len = len;
+  return tok;
+}
+
+/*
  * 次のトークンを１つ返す。
  */
 token_t lexer_next(lexer_t *lx) {
@@ -199,6 +268,9 @@ token_t lexer_next(lexer_t *lx) {
   }
   if (is_digit(c)) {
     return lex_number(lx, tok);
+  }
+  if (c == '\'') {
+    return lex_string(lx, tok);
   }
   return lex_symbol(lx, tok);
 }
