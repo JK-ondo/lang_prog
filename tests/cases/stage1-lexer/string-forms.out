@@ -1,0 +1,4 @@
+1:1	STRING	0 ''
+1:4	STRING	1 'a'
+1:8	STRING	5 'don\'t'
+1:16	EOF

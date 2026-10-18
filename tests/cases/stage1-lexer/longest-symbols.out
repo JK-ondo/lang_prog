@@ -1,0 +1,5 @@
+1:1	LEEQ	<=
+1:4	NOTEQ	<>
+1:7	GREQ	>=
+1:10	ASSIGN	:=
+1:12	EOF
