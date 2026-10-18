@@ -1,5 +1,17 @@
 #include "lexer.h"
 
+static bool is_letter(int c) {
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+}
+
+static bool is_digit(int c) {
+  return c >= '0' && c <= '9';
+}
+
+static bool is_name_char(int c) {
+  return is_letter(c) || is_digit(c);
+}
+
 /*
  * 初期化
  */
@@ -7,6 +19,21 @@ void lexer_init(lexer_t *lx, source_t *src, arena_t *arena, diag_t *diag) {
   lx->src = src;
   lx->arena = arena;
   lx->diag = diag;
+}
+
+/*
+ * 識別子を読み取る
+ * 事前条件：トークンの先頭が英字である
+ */
+static token_t lex_name(lexer_t *lx, token_t tok) {
+  const char *start = lx->src->text + lx->src->pos;
+  while (is_name_char(source_peek(lx->src))) {
+    (void)source_get(lx->src);
+  }
+  tok.text = start;
+  tok.len = (size_t)(lx->src->text + lx->src->pos - start);
+  tok.kind = token_keyword_lookup(start, tok.len);
+  return tok;
 }
 
 /*
@@ -55,8 +82,13 @@ token_t lexer_next(lexer_t *lx) {
   tok.line = lx->src->line;
   tok.col = lx->src->col;
 
-  /*
-   * ここでTOKEN分類をする。
-   */
+  int c = source_peek(lx->src);
+  if (c == SOURCE_EOF) {
+    return tok;
+  }
+  if (is_letter(c)) {
+    return lex_name(lx, tok);
+  }
+
   return tok;
 }
