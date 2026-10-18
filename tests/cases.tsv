@@ -1,0 +1,63 @@
+状態	段階	分類	ケース	入力	引数	終	検査	確かめること	根拠
+P	cli	起動	help	-	argv: --help	0	out	使い方が §2.3 の本文と完全一致	§2.3
+P	cli	起動	version	-	argv: --version	0	out	mpplc 0.1.0 の 1 行	§2.2
+P	cli	起動	no-input	-	argv:	1	out空, err	診断 1 行のみ。usage を出さない	§2.3, §6
+P	cli	起動	multi-input	-	argv: one.mpl two.mpl	1	out空, err	両方のファイル名を挙げる	§3.1, §6
+P	cli	起動	unknown-option	-	argv: -Xfoo	1	out空, err	不明オプション。入力ファイルなしより先に報告する	§2.4
+P	cli	起動	dash-dash	-	argv: -- one.mpl	1	out空, err	-- を不明オプションとして拒否	§2.4
+P	cli	起動	bad-extension	-	argv: empty.txt	0	out空, err	警告を出すがコンパイルは続行	§3.1, §4.3
+P	cli	起動	bad-extension-w	-	argv: -w empty.txt	0	out空, err空	-w で警告が消える。err が空であることが主張	§4.3
+P	cli	起動	bad-extension-werror	-	argv: -Werror empty.txt	1	out空, err	-Werror で終了コードが 1 になる	§4.3
+P	cli	起動	not-implemented	-	argv: --dump-ast one.mpl	1	out空, err	未実装フェーズの要求を拒否。source を開く前に判定する	§2.1
+P	cli	起動	help-wins	-	argv: --help one.mpl	0	out, err空	--help は入力の検証より先に処理され成功する	§2.3
+-	cli	起動	missing-input	-	argv: nosuch.mpl	1	out空, err	存在しないファイル。fopen 失敗の経路	§5.0
+-	cli	起動	input-is-dir	-	argv: .	1	out空, err	ディレクトリ。fopen は成功し fread が失敗する経路	§5.0
+-	cli	起動	bad-fmax-errors	-	argv: -fmax-errors=abc one.mpl	1	out空, err	数として読めない引数	§2.5
+P	stage1-lexer	分離子	sep-empty	（空）	--dump-tokens	0	out, err空	空ファイルで 1:1 の EOF。位置は 1 起点	§4.2
+P	stage1-lexer	分離子	sep-blank	  \t 	--dump-tokens	0	out, err空	タブは 1 桁（タブ幅で展開しない）	§5
+P	stage1-lexer	分離子	sep-newline-crlf	\r\n	--dump-tokens	0	out, err空	対になるので 1 改行	字句「改行」
+P	stage1-lexer	分離子	sep-newline-lfcr	\n\r	--dump-tokens	0	out, err空	対になるので 1 改行	字句「改行」
+P	stage1-lexer	分離子	sep-newline-crcr	\r\r	--dump-tokens	0	out, err空	対にならないので 2 改行。is_newline(n) && n != c の n != c が偽の側	字句「改行」
+P	stage1-lexer	分離子	sep-newline-lflf	\n\n	--dump-tokens	0	out, err空	対にならないので 2 改行	字句「改行」
+P	stage1-lexer	分離子	sep-comment-brace	{abc}	--dump-tokens	0	out, err空	{ } 形式を飛ばし、} も消費する	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-slash	/*abc*/	--dump-tokens	0	out, err空	/* */ 形式を飛ばし、閉じの / も消費する	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-slash-only	/*/	--dump-tokens	0	out, err空	/*/ は閉じていない。開いた直後の * を終端と誤認しない	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-stars	/***/	--dump-tokens	0	out, err空	**/ で閉じる	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-not-nested	{a{b}+	--dump-tokens	0	out, err空	入れ子にしない。最初の } で閉じ、+ が残る。8d で期待値が変わる	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-multiline	{a\nb}	--dump-tokens	0	out, err空	注釈が改行をまたげる。中の改行でも行が進む	字句「注釈」
+P	stage1-lexer	分離子	sep-comment-unclosed-brace	{abc	--dump-tokens	0	out, err空	閉じないまま EOF でもエラーにならない。err が空であることが主張	字句「注釈」（課題文の明示）
+P	stage1-lexer	分離子	sep-comment-unclosed-slash	/*abc	--dump-tokens	0	out, err空	閉じないまま EOF でもエラーにならない	字句「注釈」（課題文の明示）
+P	stage1-lexer	分離子	sep-mixed	{a} /*b*/	--dump-tokens	0	out, err空	空白と注釈が交互に続いても飛ばしきる（外側ループ）	字句「分離子」
+-	stage1-lexer	認識	keywords	?	既定	0	out	キーワード 28 語すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
+-	stage1-lexer	認識	symbols	?	既定	0	out	記号 18 個すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
+-	stage1-lexer	認識	name-vs-keyword	?	既定	0	out	begin はキーワード、Begin は名前（大小を区別）	受入基準「トークンの認識」
+-	stage1-lexer	認識	name-forms	?	既定	0	out	実体が違う名前がすべて NAME に集まる	出力仕様「同一視」
+-	stage1-lexer	認識	name-underscore	?	既定	1	out空, err	_ は名前に使えず字句エラーになる	字句「名前」
+-	stage1-lexer	最長一致	longest-symbols	?	既定	0	out	<= <> >= := が各 1 トークン。< = に割れない	最長一致規則
+-	stage1-lexer	最長一致	longest-keywords	?	既定	0	out	readln writeln が read+ln に割れない	最長一致規則
+-	stage1-lexer	最長一致	longest-quotes	?	既定	0	out	'''' が STRING 1 個（2 個ではない）。'' も 1 個	最長一致規則
+-	stage1-lexer	最長一致	string-length	?	--dump-tokens	0	out	'''' の長さが 1、'don''t' が 5	不変条件（課題3 で使う）
+-	stage1-lexer	文字列	string-forms	?	既定	0	out	'' 'a' 'don''t' がすべて STRING 1 個	字句「文字列」
+-	stage1-lexer	文字列	string-tab	?	既定	0	out	タブを含められる	字句「文字列」
+-	stage1-lexer	文字列	string-unterminated	?	既定	1	out空, err	EOF に達したらエラー（注釈と扱いが違う）	字句「文字列」
+-	stage1-lexer	文字列	string-newline	?	既定	1	out空, err	改行が来たらエラー。位置は開き '	字句「文字列」
+-	stage1-lexer	整数	number-forms	?	既定	0	out	0 007（7 として）32768 が通る	字句「符号なし整数」
+-	stage1-lexer	整数	number-over	?	既定	1	out空, err	32769 がエラー。32767 が上限ではない	字句「符号なし整数」
+-	stage1-lexer	整数	number-huge	?	既定	1	out空, err	99999999999999 で整数があふれず範囲外エラーになる	字句「符号なし整数」
+-	stage1-lexer	エラー	bad-char	?	既定	1	out空, err	@ が位置つきでエラー。黙って飛ばさない	字句エラー一覧
+-	stage1-lexer	エラー	control-code	?	既定	1	out空, err	表示文字でない制御コードがエラー	字句エラー一覧
+-	stage1-lexer	エラー	slash-alone	?	既定	1	out空, err	/ の次が * でないときエラー。lexer.c の peek2 == '*' の偽側もここで埋まる	字句エラー一覧
+-	stage1-lexer	エラー	multiple-errors	?	既定	1	out空, err	1 回の実行で複数のエラーを報告する	ADR 0003
+-	stage1-lexer	エラー	max-errors	?	-fmax-errors=2	1	out空, err	2 件出して打ち切る。3 件目以降が出ない。入力は 3 件以上の誤りを含めること	§4.3, §5.1
+-	stage1-lexer	境界	empty	（空）	既定	0	out空	空ファイルは表を 1 行も出さない	受入基準「境界」
+-	stage1-lexer	境界	whitespace-only	?	既定	0	out空	分離子だけのファイルも同じ	受入基準「境界」
+-	stage1-lexer	境界	no-trailing-newline	?	既定	0	out	末尾に改行がないファイルを正しく処理する	受入基準「境界」
+-	stage1-lexer	境界	long-line	?	既定	0	out	1 行 1000 文字以上で実行時エラーを起こさない	課題文の明示
+-	stage1-lexer	出力	order	?	既定	0	out	並びが種類の定義順（キーワード → 記号 → NAME → NUMBER → STRING）	出力仕様
+-	stage1-lexer	出力	no-zero-rows	?	既定	0	out	出現数 0 の行が出ない	出力仕様
+-	stage1-lexer	出力	identifiers	?	既定	0	out	名前の実体ごとの計数が基本の表の後に続く	出力仕様（拡張）
+-	stage1-lexer	出力	position	?	--dump-tokens	0	out	複数行・タブ・注釈を挟んだ後の行桁が正しい	不変条件
+×	-	除外	arena.c の die	-	-	-	-	到達不能。malloc を失敗させる仕組みはテストのためだけの穴になる	ADR 0002
+×	-	除外	source.c の短読み（ferror 偽）	-	-	-	-	到達不能に近い。ftell の後にファイルが縮む競合を外から起こせない	§5.0
+×	-	除外	source / token の単体テスト	-	-	-	-	C に単体テストの枠組みを入れていない。--dump-tokens 経由で確かめる	内部仕様「テストとの対応」
+×	-	除外	実装の内部構造に触るテスト	-	-	-	-	段階が進んで内部を書き換えたときに前段階のテストが残らない	内部仕様
