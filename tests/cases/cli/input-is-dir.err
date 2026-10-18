@@ -1,0 +1,2 @@
+mpplc: warning: input file '.' does not end in '.mpl' [-Wbad-file-extension]
+mpplc: error: cannot read '.': Is a directory
