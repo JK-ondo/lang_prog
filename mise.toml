@@ -37,6 +37,29 @@ fi
 clang-format -i $(git ls-files '*.c' '*.h')
 """
 
+[tasks.coverage]
+description = "テストが src のどこを通ったかを測る（clang のソースベースカバレッジ）"
+run = """
+set -e
+for tool in llvm-profdata llvm-cov; do
+  xcrun --find $tool >/dev/null 2>&1 || { echo "$tool が見つかりません（Xcode Command Line Tools が必要）" >&2; exit 1; }
+done
+
+DIR=build-coverage
+cmake -S . -B $DIR -G Ninja -DCMAKE_BUILD_TYPE=Debug -DLPP_COVERAGE=ON -DLPP_SANITIZE=OFF
+cmake --build $DIR
+
+# 1 ケースごとに別プロセスなので、%p（PID）で別ファイルに落として後で束ねる。
+# run_case.sh が cd するため、パスは絶対で渡す。
+rm -rf $DIR/prof && mkdir -p $DIR/prof
+LLVM_PROFILE_FILE="$PWD/$DIR/prof/%p.profraw" ctest --test-dir $DIR --output-on-failure
+
+xcrun llvm-profdata merge -sparse $DIR/prof/*.profraw -o $DIR/lpp.profdata
+xcrun llvm-cov report $DIR/mpplc -instr-profile=$DIR/lpp.profdata $(git ls-files 'src/*.c')
+echo
+echo "行ごとに見る: xcrun llvm-cov show $DIR/mpplc -instr-profile=$DIR/lpp.profdata src/lexer.c"
+"""
+
 # --- 検証 ---------------------------------------------------------------
 # 提出前に `mise run verify` を緑にする。各 leaf は単独でも走る。
 
