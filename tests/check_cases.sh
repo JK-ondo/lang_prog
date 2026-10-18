@@ -32,7 +32,10 @@ if ! awk -F'\t' 'NF != 10 { printf "cases.tsv:%d: 列が %d 個（10 でない�
                  END { exit bad ? 1 : 0 }' "$tsv" >&2; then
   status=1
 fi
-dups=$(awk -F'\t' 'NR > 1 && $1 != "×" { key = $2 "/" $4; if (seen[key]++ == 1) print key }' "$tsv")
+# awk の文字列リテラルに非 ASCII を書かないこと。このマシンの awk（one true awk 20200816）は
+# 多バイトのリテラルとの == / != が常に一致してしまう。段階名（ASCII）が `-` でない行だけを
+# 見れば、作らないケース（×）を除外できる。
+dups=$(awk -F'\t' 'NR > 1 && $2 != "-" { key = $2 "/" $4; if (seen[key]++ == 1) print key }' "$tsv")
 if [ -n "$dups" ]; then
   note "ケース名が重複: $dups"
 fi
@@ -53,6 +56,11 @@ while IFS="$tab" read -r state dir kind name input args code checks reason rest;
   argv:*)
     if [ ! -f "$base.argv" ]; then note "$dir/$name: .argv が無い（引数欄が argv: で始まっている）"; fi
     if [ -f "$base.src" ]; then note "$dir/$name: .argv と .src が両方ある（排他）"; fi
+    ;;
+  既定)
+    # オプションなし。.args は置かない（run_case.sh は無ければ入力だけを渡す）
+    if [ ! -f "$base.src" ]; then note "$dir/$name: .src が無い"; fi
+    if [ -s "$base.args" ]; then note "$dir/$name: .args に中身がある（引数欄は 既定）"; fi
     ;;
   *)
     if [ ! -f "$base.src" ]; then note "$dir/$name: .src が無い"; fi
