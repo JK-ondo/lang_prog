@@ -73,7 +73,7 @@ static void dump_token(FILE *out, const token_t *tok) {
         break;
       }
     }
-    (void)fputs("\n", out);
+    (void)fputs("'\n", out);
   } else {
     (void)fprintf(out, "\t%.*s\n", (int)tok->len, tok->text);
   }
