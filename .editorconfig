@@ -1,0 +1,26 @@
+# エディタの設定を揃える。https://editorconfig.org
+#
+# いちばんの目的は **tests/cases.tsv のタブを守ること**。TSV は区切りがタブなので、
+# エディタが「タブを空白に変える」設定だと列がずれて verify:cases が落ちる。
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# テスト表はタブ区切り。空白に化けると列がずれる
+[*.tsv]
+indent_style = tab
+insert_final_newline = true
+
+# 期待値ファイルは **1 バイトも変えてはいけない**。
+# 末尾改行の有無も末尾の空白も期待値そのものなので、エディタに整えさせない。
+# （例: bad-extension-w.err は 0 バイトであることが主張。改行を足すと落ちる）
+[tests/cases/**]
+insert_final_newline = false
+trim_trailing_whitespace = false
+
+# C は clang-format が持つ（.clang-format）。ここでは触らない
