@@ -67,6 +67,10 @@ echo "行ごとに見る: xcrun llvm-cov show $DIR/mpplc -instr-profile=$DIR/lpp
 description = "検証一式（fmt + lint + build + test）"
 depends = ["verify:*"]
 
+[tasks.'verify:cases']
+description = "テスト表（tests/cases.tsv）とケースのファイルが一致しているか"
+run = "sh tests/check_cases.sh"
+
 [tasks.'verify:fmt']
 description = "整形されているか（clang-format）"
 run = """
