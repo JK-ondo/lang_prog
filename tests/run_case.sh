@@ -6,14 +6,20 @@
 # 入力と期待値になる。詳細は tests/README.md。
 #
 #   <基底>.src    入力となる MPPL ソース
-#   <基底>.args   .src の前に渡す追加の引数（空白区切り）
-#   <基底>.argv   引数列の全体。これがあると .src を自動で渡さない（.args とは排他）
+#   <基底>.args   入力ファイルの前に渡す追加の引数（空白区切り）
+#   <基底>.argv   引数列の全体。これがあると入力を自動で渡さない（.args とは排他）
 #   <基底>.out    期待する標準出力（完全一致。無ければ検査しない）
 #   <基底>.err    期待する標準エラー（完全一致。無ければ検査しない）
 #   <基底>.code   期待する終了コード（無ければ 0）
 #
-# コンパイラはケースのディレクトリで起動する。渡すパスも相対なので、出力に現れるファイル名が
-# `foo.src` のようになり、期待値が環境のパスに依存しない。
+# **`.src` は作業ディレクトリに `<名前>.mpl` という名前で複製してから渡す。** ケースの登録は
+# `.src` / `.argv` の glob で行う（`.mpl` を登録対象にすると、`.argv` のケースが参照する補助
+# 入力までテストとして拾ってしまう）。一方コンパイラに `.src` のまま渡すと、拡張子が `.mpl`
+# でないという警告が全ケースの標準エラーに出る。複製するとその両方を避けられる。
+#
+# `.argv` のケースはケースのディレクトリで起動する（自分でファイル名を書くため）。どちらも
+# 渡すパスは相対なので、出力に現れるファイル名が `foo.mpl` のようになり、期待値が環境のパスに
+# 依存しない。
 #
 # UPDATE=1 を付けて走らせると .out / .err を実際の出力で上書きする。期待値は仕様から先に書く
 # もので、これは「手で確認した出力を書き写す手間」を省くためだけにある。中身を読まずに上書き
@@ -58,9 +64,9 @@ if [ -f "$base.argv" ]; then
   argv=$(cat "$base.argv")
 else
   if [ -f "$base.args" ]; then
-    argv="$(cat "$base.args") $name.src"
+    argv="$(cat "$base.args") $name.mpl"
   else
-    argv="$name.src"
+    argv="$name.mpl"
   fi
 fi
 
@@ -77,9 +83,18 @@ rm -rf "$work"
 mkdir -p "$work"
 trap 'rm -rf "$work"' EXIT INT TERM
 
+# `.src` のケースは、拡張子警告を踏まないよう `<名前>.mpl` として作業場所に複製して走らせる。
+# `.argv` のケースは自分でファイル名を書くので、ケースのディレクトリで走らせる。
+if [ -f "$base.argv" ]; then
+  rundir=$dir
+else
+  cp "$base.src" "$work/$name.mpl"
+  rundir=$work
+fi
+
 set +e
 # shellcheck disable=SC2086  # argv は意図的に単語分割する
-(cd "$dir" && "$compiler" $argv) >"$work/out" 2>"$work/err"
+(cd "$rundir" && "$compiler" $argv) >"$work/out" 2>"$work/err"
 actual_code=$?
 set -e
 
