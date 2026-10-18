@@ -37,7 +37,7 @@ P	stage1-lexer	最長一致	longest-symbols	<= <> >= :=	--dump-tokens	0	out	<= <
 P	stage1-lexer	最長一致	longest-keywords	readln writeln	--dump-tokens	0	out	readln writeln が read+ln に割れない	最長一致規則
 -	stage1-lexer	最長一致	longest-quotes	?	--dump-tokens	0	out	'''' が STRING 1 個（2 個ではない）。'' も 1 個	最長一致規則
 -	stage1-lexer	最長一致	string-length	'''' 'don''t'	--dump-tokens	0	out	'''' の長さが 1、'don''t' が 5	不変条件（課題3 で使う）
-W	stage1-lexer	文字列	string-forms	'' 'a' 'don''t'	--dump-tokens	0	out	'' 'a' 'don''t' がすべて STRING 1 個	字句「文字列」
+P	stage1-lexer	文字列	string-forms	'' 'a' 'don''t'	--dump-tokens	0	out	'' 'a' 'don''t' がすべて STRING 1 個	字句「文字列」
 -	stage1-lexer	文字列	string-tab	?	--dump-tokens	0	out	タブを含められる	字句「文字列」
 -	stage1-lexer	文字列	string-unterminated	?	既定	1	out空, err	EOF に達したらエラー（注釈と扱いが違う）	字句「文字列」
 -	stage1-lexer	文字列	string-newline	?	既定	1	out空, err	改行が来たらエラー。位置は開き '	字句「文字列」
