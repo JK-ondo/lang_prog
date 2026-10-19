@@ -1,6 +1,5 @@
 #include "source.h"
 
-#include <_stdio.h>
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
@@ -20,14 +19,14 @@ bool source_load(source_t *src, const char *filename, arena_t *a, diag_t *d) {
 
   /* サイズを取得 */
   if (fseek(f, 0, SEEK_END) != 0) {
-    (void)snprintf(msg, sizeof msg, "cannot open '%s': %s", filename, strerror(errno));
+    (void)snprintf(msg, sizeof msg, "cannot read '%s': %s", filename, strerror(errno));
     diag_error_noloc(d, msg);
     goto fail;
   }
   long size = ftell(f);
 
   if (size < 0) {
-    (void)snprintf(msg, sizeof msg, "cannot open '%s': %s", filename, strerror(errno));
+    (void)snprintf(msg, sizeof msg, "cannot read '%s': %s", filename, strerror(errno));
     diag_error_noloc(d, msg);
     goto fail;
   }
