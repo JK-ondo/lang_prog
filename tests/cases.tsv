@@ -9,9 +9,9 @@ P	cli	起動	bad-extension	-	argv: empty.txt	0	out空, err	警告を出すがコ
 P	cli	起動	bad-extension-w	-	argv: -w empty.txt	0	out空, err空	-w で警告が消える。err が空であることが主張	§4.3
 P	cli	起動	bad-extension-werror	-	argv: -Werror empty.txt	1	out空, err	-Werror で終了コードが 1 になる	§4.3
 P	cli	起動	not-implemented	-	argv: --dump-ast one.mpl	1	out空, err	未実装フェーズの要求を拒否。source を開く前に判定する	§2.1
--	cli	起動	not-implemented-semantic	-	argv: -fsyntax-only one.mpl	1	out空, err	-fsyntax-only で semantic analysis の未実装エラー	§2.1
--	cli	起動	not-implemented-symtab	-	argv: --dump-symtab one.mpl	1	out空, err	--dump-symtab も同じ未実装エラーに落ちる	§2.1
--	cli	起動	not-implemented-codegen	-	argv: -S one.mpl	1	out空, err	-S で code generation の未実装エラー	§2.1
+P	cli	起動	not-implemented-semantic	-	argv: -fsyntax-only one.mpl	1	out空, err	-fsyntax-only で semantic analysis の未実装エラー	§2.1
+P	cli	起動	not-implemented-symtab	-	argv: --dump-symtab one.mpl	1	out空, err	--dump-symtab も同じ未実装エラーに落ちる	§2.1
+P	cli	起動	not-implemented-codegen	-	argv: -S one.mpl	1	out空, err	-S で code generation の未実装エラー	§2.1
 P	cli	起動	help-wins	-	argv: --help one.mpl	0	out, err空	--help は入力の検証より先に処理され成功する	§2.3
 P	cli	起動	missing-input	-	argv: nosuch.mpl	1	out空, err	存在しないファイル。fopen 失敗の経路	§5.0
 P	cli	起動	input-is-dir	-	argv: .	1	out空, err	ディレクトリ。fopen は成功し fread が失敗する経路	§5.0
@@ -34,29 +34,32 @@ P	stage1-lexer	分離子	sep-mixed	{a} /*b*/	--dump-tokens	0	out, err空	空白�
 P	stage1-lexer	認識	keywords	program var array of begin end if then else procedure return call while do not or div and char integer boolean readln writeln true false read write break	--dump-tokens	0	out	キーワード 28 語すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
 P	stage1-lexer	認識	symbols	+ - * = <> < <= > >= ( ) [ ] := . , : ;	--dump-tokens	0	out	記号 18 個すべてが 1 回ずつ数えられる	受入基準「トークンの認識」
 P	stage1-lexer	認識	name-vs-keyword	begin BEGIN Begin bEGiN	--dump-tokens	0	out	begin はキーワード、Begin は名前（大小を区別）	受入基準「トークンの認識」
--	stage1-lexer	認識	name-forms	a b2 Xyz longlongname CamelCase	--dump-tokens	0	out	実体が違う名前がすべて NAME に集まる	出力仕様「同一視」
--	stage1-lexer	認識	name-underscore	var_name	既定	1	out空, err	_ は名前に使えず字句エラーになる	字句「名前」
+P	stage1-lexer	認識	name-forms	a b2 Xyz longlongname CamelCase	--dump-tokens	0	out	実体が違う名前がすべて NAME に集まる	出力仕様「同一視」
+P	stage1-lexer	認識	name-underscore	var_name	既定	1	out空, err	_ は名前に使えず字句エラーになる	字句「名前」
 P	stage1-lexer	最長一致	longest-symbols	<= <> >= :=	--dump-tokens	0	out	<= <> >= := が各 1 トークン。< = に割れない	最長一致規則
 P	stage1-lexer	最長一致	longest-keywords	readln writeln	--dump-tokens	0	out	readln writeln が read+ln に割れない	最長一致規則
--	stage1-lexer	最長一致	longest-quotes	?	--dump-tokens	0	out	'''' が STRING 1 個（2 個ではない）。'' も 1 個	最長一致規則
--	stage1-lexer	最長一致	string-length	'''' 'don''t'	--dump-tokens	0	out	'''' の長さが 1、'don''t' が 5	不変条件（課題3 で使う）
+P	stage1-lexer	最長一致	longest-quotes	'''' ''	--dump-tokens	0	out	'''' が STRING 1 個（2 個ではない）。'' も 1 個	最長一致規則
+P	stage1-lexer	最長一致	string-length	'''' 'don''t'	--dump-tokens	0	out	'''' の長さが 1、'don''t' が 5	不変条件（課題3 で使う）
 P	stage1-lexer	文字列	string-forms	'' 'a' 'don''t'	--dump-tokens	0	out	'' 'a' 'don''t' がすべて STRING 1 個	字句「文字列」
--	stage1-lexer	文字列	string-tab	'test\thoge'	--dump-tokens	0	out	タブを含められる	字句「文字列」
--	stage1-lexer	文字列	string-backslash	'test\hoge\\'	--dump-tokens	0	out	\ は表示文字なので文字列に書ける。dump は \\ に逃がす	§4.2, 字句「表示文字」
--	stage1-lexer	文字列	string-unterminated	'test	既定	1	out空, err	EOF に達したらエラー（注釈と扱いが違う）	字句「文字列」
--	stage1-lexer	文字列	string-newline	'test\n'	既定	1	out空, err	改行が来たらエラー。位置は開き '	字句「文字列」
+P	stage1-lexer	文字列	string-tab	'test\thoge'	--dump-tokens	0	out	タブを含められる	字句「文字列」
+P	stage1-lexer	文字列	string-backslash	'test\\hoge\\'	--dump-tokens	0	out	\ は表示文字なので文字列に書ける。dump は \\ に逃がす	§4.2, 字句「表示文字」
+P	stage1-lexer	文字列	string-unterminated	'test	既定	1	out空, err	EOF に達したらエラー（注釈と扱いが違う）	字句「文字列」
+P	stage1-lexer	文字列	string-newline	'test\n'	既定	1	out空, err	改行が来たらエラー。位置は開き '	字句「文字列」
 P	stage1-lexer	整数	number-forms	0 007 32768	--dump-tokens	0	out	0 007（7 として）32768 が通る	字句「符号なし整数」
 P	stage1-lexer	整数	number-over	32769	既定	1	out空, err	32769 がエラー。32767 が上限ではない	字句「符号なし整数」
 P	stage1-lexer	整数	number-huge	99999999999999	既定	1	out空, err	99999999999999 で整数があふれず範囲外エラーになる	字句「符号なし整数」
--	stage1-lexer	エラー	bad-char	a @	既定	1	out空, err	@ が位置つきでエラー。黙って飛ばさない	字句エラー一覧
--	stage1-lexer	エラー	control-code	a\x07b	既定	1	out空, err	表示文字でない制御コードがエラー	字句エラー一覧
--	stage1-lexer	エラー	slash-alone	/ b	既定	1	out空, err	/ の次が * でないときエラー。lexer.c の peek2 == '*' の偽側もここで埋まる	字句エラー一覧
--	stage1-lexer	エラー	multiple-errors	a @ b @ c	既定	1	out空, err	1 回の実行で複数のエラーを報告する	ADR 0003
--	stage1-lexer	エラー	max-errors	@ @ @ @	-fmax-errors=2	1	out空, err	2 件出して打ち切る。3 件目以降が出ない。入力は 3 件以上の誤りを含めること	§4.3, §5.1
+P	stage1-lexer	エラー	bad-char	a @	既定	1	out空, err	@ が位置つきでエラー。黙って飛ばさない	字句エラー一覧
+P	stage1-lexer	エラー	control-code	a\x07b	既定	1	out空, err	表示文字でない制御コードがエラー	字句エラー一覧
+P	stage1-lexer	エラー	string-control	'a\x07b'	既定	1	out空, err	文字列の中の制御コードもエラー。表示文字の定義に従う	字句「文字列」, §5.2
+P	stage1-lexer	エラー	comment-control	{a\x07b} /*c\x07d*/	既定	1	out空, err	注釈 2 形式の中の制御コードもエラー。改行とタブは通る	字句「注釈」, §5.2
+P	stage1-lexer	エラー	non-ascii	\xe3\x81\x82	既定	1	out空, err	ASCII でないバイトは 1 バイトずつエラー。UTF-8 の 1 文字で 3 件	§5.2
+P	stage1-lexer	エラー	slash-alone	/ b	既定	1	out空, err	/ の次が * でないときエラー。lexer.c の peek2 == '*' の偽側もここで埋まる	字句エラー一覧
+P	stage1-lexer	エラー	multiple-errors	a @ b @ c	既定	1	out空, err	1 回の実行で複数のエラーを報告する	ADR 0003
+P	stage1-lexer	エラー	max-errors	@ @ @ @	-fmax-errors=2	1	out空, err	2 件出して打ち切る。3 件目以降が出ない。入力は 3 件以上の誤りを含めること	§4.3, §5.1
 P	stage1-lexer	境界	empty	（空）	既定	0	out空	空ファイルは表を 1 行も出さない	受入基準「境界」
--	stage1-lexer	境界	whitespace-only	?	既定	0	out空	分離子だけのファイルも同じ	受入基準「境界」
--	stage1-lexer	境界	no-trailing-newline	?	既定	0	out	末尾に改行がないファイルを正しく処理する	受入基準「境界」
--	stage1-lexer	境界	long-line	?	既定	0	out	1 行 1000 文字以上で実行時エラーを起こさない	課題文の明示
+P	stage1-lexer	境界	whitespace-only	 \t\n\t\n \t \n	既定	0	out空	分離子だけのファイルも同じ	受入基準「境界」
+-	stage1-lexer	境界	no-trailing-newline	test 12	既定	0	out	末尾に改行がないファイルを正しく処理する	受入基準「境界」
+-	stage1-lexer	境界	long-line	-	既定	0	out	1 行 1000 文字以上で実行時エラーを起こさない	課題文の明示
 -	stage1-lexer	出力	order	?	既定	0	out	並びが種類の定義順（キーワード → 記号 → NAME → NUMBER → STRING）	出力仕様
 -	stage1-lexer	出力	no-zero-rows	?	既定	0	out	出現数 0 の行が出ない	出力仕様
 -	stage1-lexer	出力	identifiers	?	既定	0	out	名前の実体ごとの計数が基本の表の後に続く	出力仕様（拡張）
