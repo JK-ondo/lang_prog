@@ -405,7 +405,8 @@ compilation terminated due to -fmax-errors=2.
 | 文字列が行末までに閉じない | `string is not closed before end of line` |
 | 文字列がファイル末尾までに閉じない | `string is not closed before end of file` |
 | MPPL に無い表示文字 | `'<文字>' cannot be used in MPPL` |
-| 表示文字でない制御コード | `control character 0x<16進2桁> cannot be used in MPPL` |
+| 表示文字でない制御コード（`0x00`〜`0x1f`、`0x7f`） | `control character 0x<16進2桁> cannot be used in MPPL` |
+| ASCII でないバイト（`0x80`〜`0xff`） | `byte 0x<16進2桁> cannot be used in MPPL` |
 | `/` の次が `*` でない | `'/' must be followed by '*' to start a comment` |
 
 ```
@@ -414,12 +415,22 @@ foo.mpl:3:10: error: string is not closed before end of line
 foo.mpl:5:4: error: string is not closed before end of file
 foo.mpl:7:5: error: '@' cannot be used in MPPL
 foo.mpl:8:1: error: control character 0x07 cannot be used in MPPL
+foo.mpl:9:3: error: byte 0xe3 cannot be used in MPPL
 foo.mpl:9:8: error: '/' must be followed by '*' to start a comment
 ```
 
-制御コードは**16 進 2 桁の小文字**で書く（`0x07`、`0x0b`）。画面に出ない文字をそのまま
-出力に混ぜると、何が問題なのか分からなくなる。タブと改行は制御コードだが分離子なので
-ここには来ない。
+制御コードとバイトは**16 進 2 桁の小文字**で書く（`0x07`、`0x0b`、`0xe3`）。画面に出ない
+文字をそのまま出力に混ぜると、何が問題なのか分からなくなる。
+
+`0x80`〜`0xff` を「制御コード」と呼ばずに分けたのは、**`0xe3` は制御文字ではない**ため。
+MPPL のソースは ASCII であり（§5 の桁の数え方がそれに依っている）、このバイトが現れるのは
+日本語などを書いたときで、そのとき出るのは「使えないバイト」という事実だけである。
+**UTF-8 の 1 文字は 3 件のエラーになる** — バイトごとに報告する以上そうなるのが筋で、
+文字の境界を知るには MPPL が知らないはずの符号化を仮定しなければならない。
+
+**この 3 つは文字列と注釈の中でも検査する。** 仕様が文字列要素と注釈要素を「任意の表示文字」
+と定めているので、表示文字でないものはそこでも誤りである。タブと改行は表示文字なので、
+複数行の注釈も文字列中のタブも通る。
 
 `/` だけ文言が違うのは、**使う人の間違いが 1 通りに絞れる**ため。MPPL に `/` 単独の意味は
 無く（除算は `div`）、書く理由は注釈を開こうとして `*` を忘れたか、他の言語の除算を持ち
