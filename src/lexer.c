@@ -13,6 +13,31 @@ static bool is_name_char(int c) {
 }
 
 /*
+ * 表示文字（language.md の定義）= タブ、改行、および 0x20〜0x7e
+ */
+static bool is_graphic(int c) {
+  return c == '\t' || c == '\n' || (c >= 0x20 && c <= 0x7e);
+}
+
+/*
+ * MPPLにない文字を報告する（外部仕様§5.2）
+ * 事前条件：問題の文字は呼ぶ側が消化済み。tokは位置を持っている。
+ */
+static void report_bad_char(lexer_t *lx, const token_t *tok, int c) {
+  char msg[DIAG_MSG_MAX];
+  if (c == '/') {
+    (void)snprintf(msg, sizeof msg, "'/' must be followed by '*' to start a comment");
+  } else if (c >= 0x80) {
+    (void)snprintf(msg, sizeof msg, "byte 0x%02x cannot be used in MPPL", (unsigned)c);
+  } else if (!is_graphic(c)) {
+    (void)snprintf(msg, sizeof msg, "control character 0x%02x cannot be used in MPPL", (unsigned)c);
+  } else {
+    (void)snprintf(msg, sizeof msg, "'%c' cannot be used in MPPL", (char)c);
+  }
+  diag_error(lx->diag, tok->line, tok->col, msg);
+}
+
+/*
  * 初期化
  */
 void lexer_init(lexer_t *lx, source_t *src, arena_t *arena, diag_t *diag) {
@@ -135,7 +160,7 @@ static token_t lex_symbol(lexer_t *lx, token_t tok) {
     tok.kind = TOK_SEMI;
     break;
   default:
-    /* MPPL に無い文字。報告は未実装で、いまは終端として扱う */
+    /* 記号でない。kindはTOK_EOFのまま返り、呼び出しがわで報告 */
     return tok;
   }
 
@@ -164,7 +189,15 @@ static token_t lex_string(lexer_t *lx, token_t tok) {
       at_newline = (c == '\n');
       break; /* closed はfalseのまま改行は消化しない */
     }
+    const int line = lx->src->line;
+    const int col = lx->src->col;
     (void)source_get(lx->src);
+    if (!is_graphic(c)) {
+      token_t bad = {0};
+      bad.line = line;
+      bad.col = col;
+      report_bad_char(lx, &bad, c);
+    }
     if (c != '\'') {
       len++;
       continue;
@@ -214,10 +247,10 @@ static token_t lex_string(lexer_t *lx, token_t tok) {
 }
 
 /*
- * 次のトークンを１つ返す。
+ * 分離子(空白・タブ・改行・注釈)を読み飛ばす
+ * 事後条件：次の１文字は分離子でないか終端である。
  */
-token_t lexer_next(lexer_t *lx) {
-  /* 空白、タブ、改行を読み飛ばす */
+static void skip_separators(lexer_t *lx) {
   for (;;) {
     int c = source_peek(lx->src);
     if (c == ' ' || c == '\t' || c == '\n') {
@@ -228,9 +261,17 @@ token_t lexer_next(lexer_t *lx) {
       /* {---}注釈を読み飛ばす */
       (void)source_get(lx->src);
       for (;;) {
+        const int line = lx->src->line;
+        const int col = lx->src->col;
         int k = source_get(lx->src);
         if (k == SOURCE_EOF || k == '}') {
           break;
+        }
+        if (!is_graphic(k)) {
+          token_t bad = {0};
+          bad.line = line;
+          bad.col = col;
+          report_bad_char(lx, &bad, k);
         }
       }
       continue;
@@ -240,9 +281,17 @@ token_t lexer_next(lexer_t *lx) {
       (void)source_get(lx->src);
       (void)source_get(lx->src);
       for (;;) {
+        const int line = lx->src->line;
+        const int col = lx->src->col;
         int k = source_get(lx->src);
         if (k == SOURCE_EOF) {
           break;
+        }
+        if (!is_graphic(k)) {
+          token_t bad = {0};
+          bad.line = line;
+          bad.col = col;
+          report_bad_char(lx, &bad, k);
         }
         if ((k == '*' && source_peek(lx->src) == '/')) {
           (void)source_get(lx->src);
@@ -253,24 +302,42 @@ token_t lexer_next(lexer_t *lx) {
     }
     break; /* 分離子でないので、トークンの先頭 */
   }
+}
 
-  /* トークンの先頭の位置を控える */
-  token_t tok = {0};
-  tok.line = lx->src->line;
-  tok.col = lx->src->col;
+/*
+ * 次のトークンを１つ返す。
+ */
+token_t lexer_next(lexer_t *lx) {
 
-  int c = source_peek(lx->src);
-  if (c == SOURCE_EOF) {
-    return tok;
+  for (;;) {
+    /* 分離子を読み飛ばす */
+    skip_separators(lx);
+
+    /* トークンの先頭の位置を控える */
+    token_t tok = {0};
+    tok.line = lx->src->line;
+    tok.col = lx->src->col;
+
+    int c = source_peek(lx->src);
+    if (c == SOURCE_EOF) {
+      return tok;
+    }
+    if (is_letter(c)) {
+      return lex_name(lx, tok);
+    }
+    if (is_digit(c)) {
+      return lex_number(lx, tok);
+    }
+    if (c == '\'') {
+      return lex_string(lx, tok);
+    }
+
+    tok = lex_symbol(lx, tok);
+    if (tok.kind != TOK_EOF) {
+      return tok;
+    }
+
+    /* 記号でない文字である。lex_symbolが１文字消化済み。 */
+    report_bad_char(lx, &tok, c);
   }
-  if (is_letter(c)) {
-    return lex_name(lx, tok);
-  }
-  if (is_digit(c)) {
-    return lex_number(lx, tok);
-  }
-  if (c == '\'') {
-    return lex_string(lx, tok);
-  }
-  return lex_symbol(lx, tok);
 }
