@@ -1,0 +1,3 @@
+non-ascii.mpl:1:1: error: byte 0xe3 cannot be used in MPPL
+non-ascii.mpl:1:2: error: byte 0x81 cannot be used in MPPL
+non-ascii.mpl:1:3: error: byte 0x82 cannot be used in MPPL
